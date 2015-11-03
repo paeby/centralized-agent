@@ -2,6 +2,7 @@ package template;
 
 //the list of imports
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import logist.LogistSettings;
@@ -32,6 +33,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private Agent agent;
     private long timeout_setup;
     private long timeout_plan;
+    private int[] nextPickup;
+    private int[] nextDeliver;
+    private int[] time; // [p1, p2, ..., pn, d1, d2, ..., dn]
     
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
@@ -40,7 +44,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         // this code is used to get the timeouts
         LogistSettings ls = null;
         try {
-            ls = Parsers.parseSettings("config\\settings_default.xml");
+            ls = Parsers.parseSettings("config/settings_default.xml");
         }
         catch (Exception exc) {
             System.out.println("There was a problem loading the configuration file.");
@@ -61,6 +65,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
         long time_start = System.currentTimeMillis();
         
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
+        nextPickup = new int[tasks.size()+vehicles.size()];
+        nextDeliver = new int[tasks.size()+vehicles.size()];
+        time = new int[tasks.size()*2];
+
+        initSolution(vehicles, tasks);
         Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
 
         List<Plan> plans = new ArrayList<Plan>();
@@ -99,5 +108,33 @@ public class CentralizedTemplate implements CentralizedBehavior {
             current = task.deliveryCity;
         }
         return plan;
+    }
+
+    private void initSolution(List<Vehicle> vehicles, TaskSet tasks) {
+        //TODO Add capacity tracking for all vehicles at given time
+        int maxCap = 0;
+        int index = -1;
+        for (Vehicle v: vehicles) {
+            if (v.capacity() > maxCap) {
+                maxCap = v.capacity();
+                index = v.id();
+            }
+        }
+        Vehicle v = vehicles.get(index);
+        int t = 0;
+        Iterator<Task> it = tasks.iterator();
+        int prev = it.next().id;
+        nextPickup[tasks.size() + index] = prev;
+        time[prev] = t;
+        time[prev + tasks.size()] = ++t;
+
+        while(it.hasNext()) {
+            int next = it.next().id;
+            nextPickup[prev] = next;
+            time[next] = ++t;
+            time[next + tasks.size()] = ++t;
+        }
+
+
     }
 }
