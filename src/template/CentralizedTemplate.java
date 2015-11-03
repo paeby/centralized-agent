@@ -111,6 +111,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
 
     private void initSolution(List<Vehicle> vehicles, TaskSet tasks) {
+        //TODO Add capacity tracking for all vehicles at given time
         int maxCap = 0;
         int index = -1;
         for (Vehicle v: vehicles) {
