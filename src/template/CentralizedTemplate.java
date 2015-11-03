@@ -36,6 +36,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private int[] nextPickup;
     private int[] nextDeliver;
     private int[] time; // [p1, p2, ..., pn, d1, d2, ..., dn]
+    private int[][] load;
     
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
@@ -68,6 +69,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         nextPickup = new int[tasks.size()+vehicles.size()];
         nextDeliver = new int[tasks.size()+vehicles.size()];
         time = new int[tasks.size()*2];
+        load = new int[vehicles.size()][2*tasks.size()];
 
         initSolution(vehicles, tasks);
         Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
@@ -111,7 +113,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
 
     private void initSolution(List<Vehicle> vehicles, TaskSet tasks) {
-        //TODO Add capacity tracking for all vehicles at given time
         int maxCap = 0;
         int index = -1;
         for (Vehicle v: vehicles) {
@@ -126,15 +127,25 @@ public class CentralizedTemplate implements CentralizedBehavior {
         int prev = it.next().id;
         nextPickup[tasks.size() + index] = prev;
         time[prev] = t;
+        load[index][t] = getTask(tasks, prev).weight;
         time[prev + tasks.size()] = ++t;
+        load[index][t] = 0; // task has been delivered
 
         while(it.hasNext()) {
             int next = it.next().id;
             nextPickup[prev] = next;
+            load[index][t] = getTask(tasks, prev).weight;
             time[next] = ++t;
             time[next + tasks.size()] = ++t;
         }
-
-
     }
+    
+	private Task getTask(TaskSet tasks, int id) {
+		for(Task t: tasks) {
+			if(t.id == id) {
+				return t;
+			}
+		}
+		return null;
+	}
 }
