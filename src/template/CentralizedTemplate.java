@@ -2,8 +2,13 @@ package template;
 
 //the list of imports
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import logist.LogistSettings;
 
@@ -137,7 +142,84 @@ public class CentralizedTemplate implements CentralizedBehavior {
             load[index][t] = 0;
         }
     }
-
+    
+    private PlanState localChoice(List<PlanState> neighbours, List<Vehicle> vehicles, TaskSet tasks) {
+    	PlanState bestPlan = null;
+    	double min = Double.MAX_VALUE;
+    	
+    	for(PlanState neighbour: neighbours) {
+    		double cost = 0;
+    		City newCity;
+    		for(Vehicle v: vehicles) {
+    			ArrayList<Integer> vTasks = new ArrayList<Integer>();
+    			Set<Integer> delivered = new HashSet<Integer>();
+    			if(neighbour.getNextPickup()[v.id()] != null) {
+    				// moving to the first city
+    				int firstPickup = neighbour.getNextPickup()[v.id()];
+    				vTasks.add(firstPickup);
+    				newCity = getTask(tasks, firstPickup).pickupCity;
+    				cost += v.homeCity().distanceTo(newCity)*v.costPerKm(); // moving to pickup first task
+    				// moving to the next pickup or delivery city
+    				int nextPickup = firstPickup;
+    				while(neighbour.getNextPickup()[nextPickup] != null) {
+    					nextPickup = neighbour.getNextPickup()[nextPickup];
+    					vTasks.add(nextPickup); // all the tasks of a vehicle
+    					int timeP = neighbour.getTimeP()[nextPickup];
+    					
+    					// Check if there are tasks to deliver before the task to pickup
+    					int minTime = timeP;
+    					Map<Integer, Integer> toDeliver = new HashMap<Integer, Integer>();
+    					for(Integer t: vTasks) {
+    						int timeD = neighbour.getTimeD()[t];
+    						if(timeD < minTime && (!delivered.contains(t))) {
+    							toDeliver.put(timeD, t);
+    						}
+    					}
+    					
+    					while(toDeliver.size() != 0) {
+    						int minD = Collections.min(toDeliver.keySet());
+    						int deliver = toDeliver.get(minD);
+    						toDeliver.remove(minD);
+    						delivered.add(deliver);
+    						City currentCity = newCity;
+    						newCity = getTask(tasks, deliver).deliveryCity;
+    						cost += currentCity.distanceTo(newCity)*v.costPerKm();
+    					}
+    					
+    					//cost to the pickup city
+    					City prevCity = newCity;
+    					newCity = getTask(tasks, nextPickup).pickupCity;
+    					cost += prevCity.distanceTo(newCity);
+    				}
+    				
+    				//TODO CLEAN THIS DIRTY CODE
+    				// we still need to deliver all the remaining tasks
+    				Map<Integer, Integer> toDeliver = new HashMap<Integer, Integer>();
+    				for(Integer t: vTasks) {
+    					if(!delivered.contains(t)) {
+    						toDeliver.put(neighbour.getTimeD()[t], t);
+    					}
+    				}
+    				
+    				while(toDeliver.size()!=0) {
+    					int minD = Collections.min(toDeliver.keySet());
+						int deliver = toDeliver.get(minD);
+						toDeliver.remove(minD);
+						delivered.add(deliver);
+						City currentCity = newCity;
+						newCity = getTask(tasks, deliver).deliveryCity;
+						cost += currentCity.distanceTo(newCity)*v.costPerKm();
+    				}
+    			}
+    		}
+    		if(cost < min) {
+        		bestPlan = neighbour;
+        		min = cost;
+        	}
+    	}
+    	return bestPlan;
+    }
+    
     private Task getTask(TaskSet tasks, int id) {
         for (Task t : tasks) {
             if (t.id == id) {
@@ -149,16 +231,16 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
     class PlanState {
 
-        private int[] nextPickup;
-        private int[] timeP; // [p1, p2, ..., pn]
-        private int[] timeD; // [d1, d2, ..., dn]
-        private int[][] load;
+        private Integer[] nextPickup;
+        private Integer[] timeP; // [p0, p1, ..., pn]
+        private Integer[] timeD; // [d0, d1, ..., dn]
+        private Integer[][] load; 
 
         public PlanState(List<Vehicle> vehicles, TaskSet tasks) {
-            nextPickup = new int[tasks.size() + vehicles.size()];
-            timeP = new int[tasks.size()];
-            timeD = new int[tasks.size()];
-            load = new int[vehicles.size()][2 * tasks.size()];
+            nextPickup = new Integer[tasks.size() + vehicles.size()];
+            timeP = new Integer[tasks.size()];
+            timeD = new Integer[tasks.size()];
+            load = new Integer[vehicles.size()][2 * tasks.size()];
         }
 
         public PlanState(List<Vehicle> vehicles, TaskSet tasks, PlanState p) {
@@ -168,19 +250,19 @@ public class CentralizedTemplate implements CentralizedBehavior {
             load = getLoad().clone();
         }
 
-        public int[] getNextPickup() {
+        public Integer[] getNextPickup() {
             return nextPickup;
         }
 
-        public int[] getTimeP() {
+        public Integer[] getTimeP() {
             return timeP;
         }
 
-        public int[] getTimeD() {
+        public Integer[] getTimeD() {
             return timeD;
         }
 
-        public int[][] getLoad() {
+        public Integer[][] getLoad() {
             return load;
         }
     }
