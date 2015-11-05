@@ -69,7 +69,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
 
-        List<Plan> plans = new ArrayList<Plan>();
+        List<Plan> plans = new ArrayList<>();
         plans.add(planVehicle1);
         while (plans.size() < vehicles.size()) {
             plans.add(Plan.EMPTY);
@@ -83,7 +83,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
 
     private List<Plan> centralizedPlan(List<Vehicle> vehicles, final TaskSet tasks, PlanState plan) {
-        final TaskSet myTasks = tasks; //To allow access in inner class Helper
         initSolution(vehicles, tasks, plan);
         for (int i = 0; i < 10000; i++) {
             List<PlanState> neighbours = ChooseNeighbours(plan, tasks, vehicles);
@@ -95,12 +94,37 @@ public class CentralizedTemplate implements CentralizedBehavior {
         Helper helper = new Helper() {
             @Override
             public Plan buildPlan(PlanState state, Vehicle v) {
-                Integer next = state.getNextPickup()[myTasks.size() + v.id()];
-                boolean pOrD = true; //true for pickup, false for delivery
-                Task t = getTask(myTasks, state.getNextPickup()[myTasks.size() + v.id()].intValue());
-                Plan p = new Plan(v.homeCity());
-                while(next != null) {
-                    //TODO Add move to next pickup or delivery location, followed by pickup or delivery of specific task found in nextPickup
+                Integer next = state.getNextPickup()[tasks.size() + v.id()];
+                Task t = getTask(tasks, state.getNextPickup()[tasks.size() + v.id()]);
+                City current = v.homeCity();
+                Plan p = new Plan(current);
+                ArrayIterator itP = new ArrayIterator(state.getTimeP(), state.getVTasks().get(v.id()));
+                ArrayIterator itD = new ArrayIterator(state.getTimeD(), state.getVTasks().get(v.id()));
+                while(itP.hasNext() || itD.hasNext()) {
+                    int pickupTime = Integer.MAX_VALUE;
+                    int pickupIndex = -1;
+                    int deliverTime = Integer.MAX_VALUE;
+                    int deliverIndex = -1;
+                    if(itP.hasNext()) {
+                        pickupTime = itP.next();
+                        pickupIndex = itP.indexOf(pickupTime);
+                    }
+                    if(itD.hasNext()) {
+                        deliverTime = itD.next();
+                        deliverIndex = itD.indexOf(deliverTime);
+                    }
+                    if(pickupTime < deliverTime) {
+                        for (City c: current.pathTo(getTask(tasks, pickupIndex).pickupCity)){
+                            p.appendMove(c);
+                        }
+                        p.appendPickup(getTask(tasks, pickupIndex));
+                    } else {
+                        for (City c: current.pathTo(getTask(tasks, deliverIndex).deliveryCity)){
+                            p.appendMove(c);
+                        }
+                        p.appendDelivery(getTask(tasks, deliverIndex));
+                    }
+                    //TODO nextPickup still necessary with hashSet of tasks for each vehicle?
                 }
                 
                 
@@ -180,8 +204,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
             vplans.add(v.id(), helper.buildPlan(plan, v));
         }
         return vplans;
-
-
     }
 
 
@@ -320,7 +342,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
     
     private List<PlanState> ChooseNeighbours(PlanState plan, TaskSet tasks, List<Vehicle> vehicles){
-    	List<PlanState> neighbours = new ArrayList<PlanState>();
+    	List<PlanState> neighbours = new ArrayList<>();
     	
     	return neighbours;
     }
@@ -339,8 +361,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
         private Integer[] nextPickup;
         private Integer[] timeP; // [p0, p1, ..., pn]
         private Integer[] timeD; // [d0, d1, ..., dn]
-        private Integer[][] load; 
+        private Integer[][] load;
+        private Map<Integer, HashSet<Integer>> vTasks = new HashMap<>(); // Map from vehicle_id to Set of tasks in vehicle's track
 
+        /**
+         * Constructor for empty PlanState
+         * @param vehicles
+         * @param tasks
+         */
         public PlanState(List<Vehicle> vehicles, TaskSet tasks) {
             nextPickup = new Integer[tasks.size() + vehicles.size()];
             timeP = new Integer[tasks.size()];
@@ -348,11 +376,34 @@ public class CentralizedTemplate implements CentralizedBehavior {
             load = new Integer[vehicles.size()][2 * tasks.size()];
         }
 
+        /**
+         * Constructor that copies a plan
+         * @param vehicles
+         * @param tasks
+         * @param p plan to be copied to new plan
+         */
         public PlanState(List<Vehicle> vehicles, TaskSet tasks, PlanState p) {
             nextPickup = p.getNextPickup().clone();
             timeP = p.getTimeP().clone();
             timeD = p.getTimeD().clone();
             load = getLoad().clone();
+            //Copy of HashSet values in Map
+            for(Map.Entry<Integer, HashSet<Integer>> e: p.getVTasks().entrySet()) {
+                for(Integer i: e.getValue()) {
+                    vTasks.get(e.getKey()).add(i);
+                }
+            }
+        }
+
+        /**
+         *
+         * @param v1 Vehicle that has task t in its set
+         * @param v2 Vehicle that wants task t in its set
+         * @param t Task to be moved from v1 to v2
+         */
+        public void moveTask(Integer v1, Integer v2, Integer t) {
+            vTasks.get(v1).remove(t);
+            vTasks.get(v2).add(t);
         }
 
         public Integer[] getNextPickup() {
@@ -370,6 +421,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
         public Integer[][] getLoad() {
             return load;
         }
+
+        public Map<Integer, HashSet<Integer>> getVTasks() {
+            return vTasks;
+        }
+
     }
 
     /**
@@ -377,28 +433,43 @@ public class CentralizedTemplate implements CentralizedBehavior {
      */
     class ArrayIterator implements Iterator {
 
-        private int[] time;
         private List<Integer> l;
+        private HashSet<Integer> tasks;
 
-        //TODO Need to know which tasks in time belong to which vehicle - Map object in state or List of Lists?
-        ArrayIterator(Integer[] t) {
-            l = Arrays.asList(t);
+        ArrayIterator(Integer[] time, HashSet<Integer> t) {
+            l = Arrays.asList(time);
+            for (Integer i: t) {
+                tasks.add(i);
+            }
         }
 
         @Override
         public boolean hasNext() {
+            for (Integer i: tasks) {
+                if(l.get(i.intValue()) != null) return true;
+            }
             return false;
         }
 
         @Override
         public Integer next() {
-
-            return null;
+            Integer min;
+            Integer index;
+            do {
+                min = Collections.min(l);
+                index = l.indexOf(min);
+            } while (!tasks.contains(index));
+            l.set(index, null); //remove
+            return min;
         }
 
         @Override
         public void remove() {
 
+        }
+
+        public int indexOf(Integer val) {
+            return l.indexOf(val);
         }
     }
 
