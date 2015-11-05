@@ -1,9 +1,7 @@
 package template;
 
 //the list of imports
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import logist.LogistSettings;
 
@@ -31,10 +29,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private Agent agent;
     private long timeout_setup;
     private long timeout_plan;
-    private int[] nextPickup;
-    private int[] nextDeliver;
-    private int[] time; // [p1, p2, ..., pn, d1, d2, ..., dn]
-    private int[][] load;
 
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
@@ -63,12 +57,10 @@ public class CentralizedTemplate implements CentralizedBehavior {
         long time_start = System.currentTimeMillis();
 
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
-        nextPickup = new int[tasks.size() + vehicles.size()];
-        nextDeliver = new int[tasks.size() + vehicles.size()];
-        time = new int[tasks.size() * 2];
-        load = new int[vehicles.size()][2 * tasks.size()];
+        PlanState plan = new PlanState(vehicles, tasks);
 
-        initSolution(vehicles, tasks);
+        //List<Plan> plans = centralizedPlan(vehicles, tasks, plan);
+
         Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
 
         List<Plan> plans = new ArrayList<Plan>();
@@ -83,6 +75,40 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         return plans;
     }
+
+    private List<Plan> centralizedPlan(List<Vehicle> vehicles, TaskSet tasks, PlanState plan) {
+        final TaskSet myTasks = tasks; //To allow access in inner class Helper
+        initSolution(vehicles, tasks, plan);
+        for (int i = 0; i < 10000; i++) {
+            List<PlanState> neighbours = ChooseNeighbours(plan, );
+            plan = LocalChoice(neighbours, vehicles);
+        }
+
+        List<Plan> vplans = new ArrayList<>();
+
+        Helper helper = new Helper() {
+            @Override
+            public Plan buildPlan(PlanState state, Vehicle v) {
+                Integer next = state.getNextPickup()[myTasks.size() + v.id()];
+                boolean pOrD = true; //true for pickup, false for delivery
+                Task t = getTask(myTasks, state.getNextPickup()[myTasks.size() + v.id()].intValue());
+                Plan p = new Plan(v.homeCity());
+                while(next != null) {
+                    //TODO Add move to next pickup or delivery location, followed by pickup or delivery of specific task found in nextPickup
+                }
+                return null; //return Plan for vehicle v
+            }
+        }
+
+        for (Vehicle v: vehicles) {
+            vplans.add(v.id(), helper.buildPlan(plan, v));
+        }
+        return vplans;
+
+
+    }
+
+
 
     private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
         City current = vehicle.getCurrentCity();
@@ -109,7 +135,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return plan;
     }
 
-    private void initSolution(List<Vehicle> vehicles, TaskSet tasks) {
+    private void initSolution(List<Vehicle> vehicles, TaskSet tasks, PlanState plan) {
         int maxCap = 0;
         int index = -1;
         for (Vehicle v : vehicles) {
@@ -122,19 +148,19 @@ public class CentralizedTemplate implements CentralizedBehavior {
         int t = 0;
         Iterator<Task> it = tasks.iterator();
         int prev = it.next().id;
-        nextPickup[tasks.size() + index] = prev;
-        time[prev] = t;
-        load[index][t] = getTask(tasks, prev).weight;
-        time[prev + tasks.size()] = ++t;
-        load[index][t] = 0; // task has been delivered
+        plan.getNextPickup()[tasks.size() + index] = prev;
+        plan.getTimeP()[prev] = t;
+        plan.getLoad()[index][t] = getTask(tasks, prev).weight;
+        plan.getTimeD()[prev] = ++t;
+        plan.getLoad()[index][t] = 0; // task has been delivered
 
         while (it.hasNext()) {
             int next = it.next().id;
-            nextPickup[prev] = next;
-            load[index][t] = getTask(tasks, prev).weight; // 0 or weight in load in initialised state.
-            time[next] = ++t;
-            time[next + tasks.size()] = ++t;
-            load[index][t] = 0;
+            plan.getNextPickup()[prev] = next;
+            plan.getLoad()[index][t] = getTask(tasks, prev).weight; // 0 or weight in load in initialised state.
+            plan.getTimeP()[next] = ++t;
+            plan.getTimeD()[next] = ++t;
+            plan.getLoad()[index][t] = 0;
         }
     }
 
@@ -147,17 +173,17 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return null;
     }
 
-    class PlanState {
+    public class PlanState {
 
-        private int[] nextPickup;
-        private int[] timeP; // [p1, p2, ..., pn]
-        private int[] timeD; // [d1, d2, ..., dn]
+        private Integer[] nextPickup;
+        private Integer[] timeP; // [p1, p2, ..., pn]
+        private Integer[] timeD; // [d1, d2, ..., dn]
         private int[][] load;
 
         public PlanState(List<Vehicle> vehicles, TaskSet tasks) {
-            nextPickup = new int[tasks.size() + vehicles.size()];
-            timeP = new int[tasks.size()];
-            timeD = new int[tasks.size()];
+            nextPickup = new Integer[tasks.size() + vehicles.size()];
+            timeP = new Integer[tasks.size()];
+            timeD = new Integer[tasks.size()];
             load = new int[vehicles.size()][2 * tasks.size()];
         }
 
@@ -168,15 +194,15 @@ public class CentralizedTemplate implements CentralizedBehavior {
             load = getLoad().clone();
         }
 
-        public int[] getNextPickup() {
+        public Integer[] getNextPickup() {
             return nextPickup;
         }
 
-        public int[] getTimeP() {
+        public Integer[] getTimeP() {
             return timeP;
         }
 
-        public int[] getTimeD() {
+        public Integer[] getTimeD() {
             return timeD;
         }
 
@@ -184,4 +210,46 @@ public class CentralizedTemplate implements CentralizedBehavior {
             return load;
         }
     }
+
+    /**
+     * Iterates over an int array from min to max
+     */
+    class ArrayIterator implements Iterator {
+
+        private int[] time;
+        private List<Integer> l;
+
+        //TODO Need to know which tasks in time belong to which vehicle - Map object in state or List of Lists?
+        ArrayIterator(Integer[] t) {
+            l = Arrays.asList(t);
+        }
+
+        @Override
+        public boolean hasNext() {
+            return false;
+        }
+
+        @Override
+        public Integer next() {
+
+            return null;
+        }
+
+        @Override
+        public void remove() {
+
+        }
+    }
+
+    interface Helper {
+        /**
+         * Builds the plan for a given vehicle from the state achieved through optimisation
+         * @param state achieved through n iterations
+         * @param v a vehicle from the list
+         * @return plan for vehicle v
+         */
+        Plan buildPlan(PlanState state, Vehicle v);
+    }
 }
+
+
