@@ -251,7 +251,21 @@ public class CentralizedTemplate implements CentralizedBehavior {
     		}
     	}
     	
-    	// Add 
+    	// Changing task order 
+    	neighbours.addAll(changeTaskOrder(v1, plan));
+    	
+    	return neighbours;
+    }
+    
+    private List<PlanState> changeTaskOrder(Vehicle v1, PlanState plan) {
+    	List<PlanState> neighbours = new ArrayList<PlanState>();
+    	
+    	// iterate through all swaps of two pickups if it's possible
+    	// 		iterate through swaps of deliver
+    	
+    	//OR
+    	
+    	// iterate through swaps of pickup/deliver together?
     	
     	return neighbours;
     }
