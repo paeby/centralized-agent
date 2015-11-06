@@ -170,7 +170,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
         int t = 0;
         Iterator<Task> it = tasks.iterator();
         int prev = it.next().id;
+        
         plan.getNextPickup()[tasks.size() + index] = prev;
+        plan.addVTasks(index, prev);
         plan.getTimeP()[prev] = t;
         plan.getLoad()[index][t] = getTask(tasks, prev).weight;
         plan.getTimeD()[prev] = ++t;
@@ -178,6 +180,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         while (it.hasNext()) {
             int next = it.next().id;
+            plan.addVTasks(index, next);
             plan.getNextPickup()[prev] = next;
             plan.getLoad()[index][t] = getTask(tasks, prev).weight; // 0 or weight in load in initialised state.
             plan.getTimeP()[next] = ++t;
@@ -216,7 +219,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
                          current = getTask(tasks, pickupIndex).pickupCity;
                
                      } else {
-                         cost += current.distanceTo(getTask(tasks, deliverIndex).deliveryCity);
+                         cost += current.distanceTo(getTask(tasks, deliverIndex).deliveryCity)*v.costPerKm();
                          current = getTask(tasks, deliverIndex).deliveryCity;
                      }
                  }
@@ -231,6 +234,21 @@ public class CentralizedTemplate implements CentralizedBehavior {
     
     private List<PlanState> ChooseNeighbours(PlanState plan, TaskSet tasks, List<Vehicle> vehicles){
     	List<PlanState> neighbours = new ArrayList<PlanState>();
+    	Vehicle v1;
+    	
+    	// Pick random vehicle
+    	int vTasks = 0;
+    	do {
+    		v1 = vehicles.get(new Random().nextInt(vehicles.size() + 1));
+    		vTasks = plan.getVTasks().get(v1.id()).size();
+    	} while(vTasks < 1);
+    	
+    	// Change first task with all other vehicles
+    	for(Vehicle v2: vehicles) {
+    		if(v1.id() != v2.id()) {
+    			
+    		}
+    	}
     	
     	return neighbours;
     }
@@ -246,7 +264,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
     public class PlanState {
 
-        private Integer[] nextPickup;
+        private Integer[] nextPickup; //
         private Integer[] timeP; // [p0, p1, ..., pn]
         private Integer[] timeD; // [d0, d1, ..., dn]
         private Integer[][] load;
@@ -312,6 +330,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         public Map<Integer, HashSet<Integer>> getVTasks() {
             return vTasks;
+        }
+        
+        public void addVTasks(Integer v, Integer t) {
+        	vTasks.get(v).add(t);
+        }
+        
+        public void removeVTasks(Integer v, Integer t) {
+        	vTasks.get(v).remove(t);
         }
 
     }
