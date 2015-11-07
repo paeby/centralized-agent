@@ -547,7 +547,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     class ArrayIterator implements Iterator<Object> {
 
         private List<Integer> l;
-        private HashSet<Integer> tasks;
+        private HashSet<Integer> tasks = new HashSet<>();
 
         ArrayIterator(Integer[] time, HashSet<Integer> t) {
             l = Arrays.asList(time);
@@ -559,7 +559,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         @Override
         public boolean hasNext() {
             for (Integer i: tasks) {
-                if(l.get(i.intValue()) != null) return true;
+                if(l.get(i) != null) return true;
             }
             return false;
         }
