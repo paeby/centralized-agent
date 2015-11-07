@@ -109,11 +109,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
                     int deliverIndex = -1;
                     if(itP.hasNext()) {
                         pickupTime = itP.next();
-                        pickupIndex = itP.indexOf(pickupTime);
+                        pickupIndex = findIndex(v, state, state.getTimeP(), pickupTime);
                     }
                     if(itD.hasNext()) {
                         deliverTime = itD.next();
-                        deliverIndex = itD.indexOf(deliverTime);
+                        deliverIndex = findIndex(v, state, state.getTimeD(), deliverTime);
                     }
                     if(pickupTime < deliverTime) {
                         for (City c: current.pathTo(getTask(tasks, pickupIndex).pickupCity)){
@@ -232,11 +232,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
                      int deliverIndex = -1;
                      if(itP.hasNext()) {
                          pickupTime = itP.next();
-                         pickupIndex = itP.indexOf(pickupTime);
+                         pickupIndex = findIndex(v, neighbour, neighbour.getTimeP(), pickupTime);
                      }
                      if(itD.hasNext()) {
                          deliverTime = itD.next();
-                         deliverIndex = itD.indexOf(deliverTime);
+                         deliverIndex = findIndex(v, neighbour, neighbour.getTimeD(), deliverTime);
                      }
                      if(pickupTime < deliverTime) {
                          cost += current.distanceTo(getTask(neighbour.tasks, pickupIndex).pickupCity)*v.costPerKm();
@@ -336,7 +336,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
      * @return true if all pickups of tasks happen before their delivery, else false
      */
     private boolean checkTimes(Integer[] pickup, Integer[] delivery, HashSet<Integer> tasks) {
-    	for(Integer t: tasks) {
+        System.out.println("CentralizedTemplate.checkTimes");
+        for(Integer t: tasks) {
     		if(pickup[t] > delivery[t]) return false;
     	}
     	return true;
@@ -349,6 +350,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
      * @return true if load is legal, else false
      */
     private boolean updateLoad(PlanState plan, Vehicle vehicle) {
+        System.out.println("CentralizedTemplate.updateLoad");
         int vID = vehicle.id();
     	Integer next = plan.getNextPickup()[vID];
         Task t = getTask(plan.tasks, next);
@@ -363,11 +365,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
                 pickupTime = itP.next();
                 for(Integer t2: plan.getTimeP()) System.out.println(t2);
 
-                pickupIndex = findIndex(vID, plan, plan.getTimeP(),pickupTime);
+                pickupIndex = findIndex(vehicle, plan, plan.getTimeP(),pickupTime);
             }
             if(itD.hasNext()) {
                 deliverTime = itD.next();
-                deliverIndex = findIndex(vID, plan, plan.getTimeD(),deliverTime);
+                deliverIndex = findIndex(vehicle, plan, plan.getTimeD(),deliverTime);
             }
             if(pickupTime < deliverTime) {
             	System.out.println(pickupIndex);
@@ -382,9 +384,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
         
     }
     
-    private Integer findIndex(Integer v, PlanState plan, Integer[] times, Integer t) {
+    private Integer findIndex(Vehicle v, PlanState plan, Integer[] times, Integer t) {
     	for(int i = 0; i < times.length; i++) {
-    		if(times[i] == t && plan.getVTasks().get(v).contains(i)) return i;
+    		if(times[i] == t && plan.getVTasks().get(v.id()).contains(i)) return i;
     	}
     	return null;
     }
@@ -601,10 +603,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
         @Override
         public void remove() {
 
-        }
-
-        public int indexOf(Integer val) {
-            return l.indexOf(val);
         }
     }
 
