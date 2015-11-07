@@ -265,7 +265,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	private List<PlanState> ChooseNeighbours(PlanState plan, TaskSet tasks, List<Vehicle> vehicles){
 		List<PlanState> neighbours = new ArrayList<PlanState>();
 		Vehicle v1;
-		System.out.println("CentralizedTemplate.ChooseNeighbours");
 
 		// Pick random vehicle
 		int vTasks;
@@ -293,7 +292,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	 * @return neighbours of the current plan with permutations over task set of vehicle v1
 	 */
 	private List<PlanState> changeTaskOrder(Vehicle v1, PlanState plan) {
-		System.out.println("CentralizedTemplate.changeTaskOrder");
 		List<PlanState> neighbours = new ArrayList<PlanState>();
 		int arraySize =  plan.getVTasks(v1).size();
 		//sort the hash set to a list
@@ -335,7 +333,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	 * @return true if all pickups of tasks happen before their delivery, else false
 	 */
 	private boolean checkTimes(Integer[] pickup, Integer[] delivery, HashSet<Integer> tasks) {
-		System.out.println("CentralizedTemplate.checkTimes");
 		for(Integer t: tasks) {
 			if(pickup[t] > delivery[t]) return false;
 		}
@@ -349,7 +346,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	 * @return true if load is legal, else false
 	 */
 	private boolean updateLoad(PlanState plan, Vehicle vehicle) {
-		System.out.println("CentralizedTemplate.updateLoad");
 		int vID = vehicle.id();
 		Integer next = plan.getNextPickup()[vID];
 		Task t = getTask(plan.tasks, next);
@@ -454,6 +450,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
 				newNeighbour.getLoad()[v2.id()][i] += weight;
 			}
 			deliver ++;
+            newNeighbour.getNextPickup()[v2.id()] = newNeighbour.getNextPickup()[v1.id()]; // Update nextPickup for v2
+            for (Integer i: newNeighbour.getVTasks(v1))  // Update nextPickup for v1 to the task after the one just removed
+                if (newNeighbour.getTimeP()[i] == 0)
+                    newNeighbour.getNextPickup()[v1.id()] = i;
+
 			neighbours.add(newNeighbour);
 		}
 		return neighbours;
@@ -601,9 +602,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
 					index = t;
 				}
 			}
-		
+
 			l.set(index, -1); //remove
-			System.out.println(index);
 			return min;
 		}
 
