@@ -499,10 +499,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
             nextPickup = p.getNextPickup().clone();
             timeP = p.getTimeP().clone();
             timeD = p.getTimeD().clone();
-            load = getLoad().clone();
+            load = p.getLoad().clone();
             this.tasks = p.tasks;
             this.vehicles = p.vehicles;
             //Copy of HashSet values in Map
+            for(Vehicle v: vehicles) vTasks.put(v.id(), new HashSet<Integer>());
             for(Map.Entry<Integer, HashSet<Integer>> e: p.getVTasks().entrySet()) {
                 for(Integer i: e.getValue()) {
                     vTasks.get(e.getKey()).add(i);
