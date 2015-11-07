@@ -300,13 +300,22 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		for(int i = 0; i < arraySize*2-1; i++) {
 			for(int j = i+1; j < arraySize*2; j++) {
 				PlanState neighbour = new PlanState(plan);
-
+				
 				if(i < arraySize && j < arraySize) {
+					if(neighbour.getTimeP()[tasks.get(i)] == 0) {
+						neighbour.getNextPickup()[v1.id()] = tasks.get(j);
+					}
+					else if(neighbour.getTimeP()[tasks.get(j)] == 0) {
+						neighbour.getNextPickup()[v1.id()] = tasks.get(i);
+					}
 					int t1 = neighbour.getTimeP()[tasks.get(i)];
 					neighbour.getTimeP()[tasks.get(i)] = neighbour.getTimeP()[tasks.get(j)];
 					neighbour.getTimeP()[tasks.get(j)] = t1;
 				}
 				else if(i < arraySize && j >= arraySize) {
+					if(neighbour.getTimeP()[tasks.get(i)] == 0){
+						neighbour.getNextPickup()[v1.id()] = tasks.get(j-arraySize);
+					}
 					int t1 = neighbour.getTimeP()[tasks.get(i)];
 					neighbour.getTimeP()[tasks.get(i)] = neighbour.getTimeD()[tasks.get(j-arraySize)];
 					neighbour.getTimeD()[tasks.get(j-arraySize)] = t1;
