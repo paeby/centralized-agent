@@ -57,15 +57,15 @@ public class CentralizedTemplate implements CentralizedBehavior {
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
         PlanState plan = new PlanState(vehicles, tasks);
 
-        //List<Plan> plans = centralizedPlan(vehicles, tasks, plan);
+        List<Plan> plans = centralizedPlan(vehicles, tasks, plan);
 
-        Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
+        //Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
 
-        List<Plan> plans = new ArrayList<Plan>();
-        plans.add(planVehicle1);
-        while (plans.size() < vehicles.size()) {
-            plans.add(Plan.EMPTY);
-        }
+//        List<Plan> plans = new ArrayList<Plan>();
+//        plans.add(planVehicle1);
+//        while (plans.size() < vehicles.size()) {
+//            plans.add(Plan.EMPTY);
+//        }
 
         long time_end = System.currentTimeMillis();
         long duration = time_end - time_start;
@@ -77,8 +77,10 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private List<Plan> centralizedPlan(List<Vehicle> vehicles, final TaskSet tasks, PlanState plan) {
         initSolution(vehicles, tasks, plan);
         for (int i = 0; i < 10000; i++) {
-            List<PlanState> neighbours = ChooseNeighbours(plan, tasks, vehicles);
-            plan = localChoice(neighbours);
+        	if(new Random().nextInt(100) < 40) {
+        		 List<PlanState> neighbours = ChooseNeighbours(plan, tasks, vehicles);
+                 plan = localChoice(neighbours);
+        	}  
         }
 
         List<Plan> vplans = new ArrayList<Plan>();
@@ -279,7 +281,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
     			}
     		}
     	}
-    	
     	return neighbours;
     }
     
@@ -431,6 +432,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
             load = new Integer[vehicles.size()][2 * tasks.size()];
             this.vehicles = vehicles;
             this.tasks = tasks;
+            for(Vehicle v: vehicles) vTasks.put(v.id(), new HashSet<Integer>());
         }
 
         /**
