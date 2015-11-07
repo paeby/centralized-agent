@@ -272,8 +272,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	int vTasks;
     	do {
     		v1 = vehicles.get(new Random().nextInt(vehicles.size()));
-            vTasks = plan.getVTasks().get(v1.id()).size();
-        } while(vTasks < 1);
+    		vTasks = plan.getVTasks().get(v1.id()).size();
+    	} while(vTasks < 1);
     	
     	// Change first task with all other vehicles
     	Integer task = plan.getNextPickup()[v1.id()];
@@ -284,7 +284,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	
     	// Changing task order 
     	neighbours.addAll(changeTaskOrder(v1, plan));
-    	
     	return neighbours;
     }
 
@@ -298,52 +297,37 @@ public class CentralizedTemplate implements CentralizedBehavior {
         System.out.println("CentralizedTemplate.changeTaskOrder");
         List<PlanState> neighbours = new ArrayList<PlanState>();
     	int arraySize =  plan.getVTasks().get(v1.id()).size();
-    	List<Integer> times = new ArrayList<Integer>();
-    	for(int i = 0; i < arraySize*2; i++) times.add(i);
-    	
-    	for(List<Integer> permutation: generatePerm(times)) {
-    		Integer[] pickup = permutation.subList(0, arraySize-1).toArray(new Integer[arraySize]);
-    		Integer[] deliver = permutation.subList(arraySize, permutation.size()-1).toArray(new Integer[arraySize]);
-    		if(checkTimes(pickup, deliver, plan.getVTasks().get(v1.id()))) {
+    	//sort the hash set to a list
+    	ArrayList<Integer> tasks = new ArrayList<Integer>(new TreeSet<Integer>(plan.getVTasks().get(v1.id()))); 
+    		
+    	for(int i = 0; i < arraySize*2-1; i++) {
+    		for(int j = i+1; j < arraySize*2; j++) {
     			PlanState neighbour = new PlanState(plan);
-    			int i = 0;
-    			for(Integer t: neighbour.getVTasks().get(v1.id())) {
-    				neighbour.getTimeP()[t] = pickup[i];
-    				neighbour.getTimeD()[t] = deliver[i];
-    				i++;
+
+    			if(i < arraySize && j < arraySize) {
+    				int t1 = neighbour.getTimeP()[tasks.get(i)];
+    				neighbour.getTimeP()[tasks.get(i)] = neighbour.getTimeP()[tasks.get(j)];
+    				neighbour.getTimeP()[tasks.get(j)] = t1;
     			}
-    			if(updateLoad(neighbour, v1.id())) {
-    				neighbours.add(neighbour);
+    			else if(i < arraySize && j >= arraySize) {
+    				int t1 = neighbour.getTimeP()[tasks.get(i)];
+    				neighbour.getTimeP()[tasks.get(i)] = neighbour.getTimeD()[tasks.get(j-arraySize)];
+    				neighbour.getTimeD()[tasks.get(j-arraySize)] = t1;
+    			}
+    			else {
+    				int t1 = neighbour.getTimeD()[tasks.get(i-arraySize)];
+    				neighbour.getTimeD()[tasks.get(i-arraySize)] = neighbour.getTimeD()[tasks.get(j-arraySize)];
+    				neighbour.getTimeD()[tasks.get(j-arraySize)] = t1;
+    			}
+    			if(checkTimes(neighbour.getTimeP(), neighbour.getTimeD(), plan.getVTasks().get(v1.id())) 
+    					&& updateLoad(neighbour, v1.id())){
+        			neighbours.add(neighbour);
     			}
     		}
     	}
     	return neighbours;
     }
-
-    /**
-     * Generates a list of all possible permutations of a given list of integers
-     * @param original list of integers to permute
-     * @return List of all possible permutations of integer list
-     */
-    public List<List<Integer>> generatePerm(List<Integer> original) {
-        if (original.size() == 0) { 
-          List<List<Integer>> result = new ArrayList<List<Integer>>();
-          result.add(new ArrayList<Integer>());
-          return result;
-        }
-        Integer firstElement = original.remove(0);
-        List<List<Integer>> returnValue = new ArrayList<List<Integer>>();
-        List<List<Integer>> permutations = generatePerm(original);
-        for (List<Integer> smallerPermuted : permutations) {
-          for (int index=0; index <= smallerPermuted.size(); index++) {
-            List<Integer> temp = new ArrayList<Integer>(smallerPermuted);
-            temp.add(index, firstElement);
-            returnValue.add(temp);
-          }
-        }
-        return returnValue;
-      }
-
+    
     /**
      * Checks the validity of pickup and delivery time arrays
      * @param pickup array for pickup times of tasks, with each id = task_id and pickup[id] the time at which it is picked up
