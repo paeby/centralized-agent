@@ -84,7 +84,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private List<Plan> centralizedPlan(List<Vehicle> vehicles, final TaskSet tasks, PlanState plan) {
         initSolution(vehicles, tasks, plan);
         for (int i = 0; i < 10000; i++) {
-        	if(new Random().nextInt(100) < 40) {
+
+            if(new Random().nextInt(100) < 40) {
         		 List<PlanState> neighbours = ChooseNeighbours(plan, tasks, vehicles);
                  plan = localChoice(neighbours);
         	}  
@@ -265,22 +266,20 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private List<PlanState> ChooseNeighbours(PlanState plan, TaskSet tasks, List<Vehicle> vehicles){
     	List<PlanState> neighbours = new ArrayList<PlanState>();
     	Vehicle v1;
-    	
-    	// Pick random vehicle
+        System.out.println("CentralizedTemplate.ChooseNeighbours");
+
+        // Pick random vehicle
     	int vTasks;
     	do {
-    		v1 = vehicles.get(new Random().nextInt(vehicles.size() + 1));
-    		vTasks = plan.getVTasks().get(v1.id()).size();
-    	} while(vTasks < 1);
+    		v1 = vehicles.get(new Random().nextInt(vehicles.size()));
+            vTasks = plan.getVTasks().get(v1.id()).size();
+        } while(vTasks < 1);
     	
     	// Change first task with all other vehicles
     	Integer task = plan.getNextPickup()[v1.id()];
     	for(Vehicle v2: vehicles) {
-    		if(v1.id() != v2.id()) {
-    			if(v2.capacity() <= getTask(tasks, task).weight) {
-    				neighbours.addAll(changeVehicle(v1, v2, task, plan));
-    			}
-    		}
+            if(v1.id() != v2.id() && getTask(tasks, task).weight <= v2.capacity())
+                neighbours.addAll(changeVehicle(v1, v2, task, plan));
     	}
     	
     	// Changing task order 
@@ -296,7 +295,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
      * @return neighbours of the current plan with permutations over task set of vehicle v1
      */
     private List<PlanState> changeTaskOrder(Vehicle v1, PlanState plan) {
-    	List<PlanState> neighbours = new ArrayList<PlanState>();
+        System.out.println("CentralizedTemplate.changeTaskOrder");
+        List<PlanState> neighbours = new ArrayList<PlanState>();
     	int arraySize =  plan.getVTasks().get(v1.id()).size();
     	List<Integer> times = new ArrayList<Integer>();
     	for(int i = 0; i < arraySize*2; i++) times.add(i);
@@ -307,7 +307,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     		if(checkTimes(pickup, deliver, plan.getVTasks().get(v1.id()))) {
     			PlanState neighbour = new PlanState(plan);
     			int i = 0;
-    			for(Integer t: neighbour.getVTasks().get(v1)) {
+    			for(Integer t: neighbour.getVTasks().get(v1.id())) {
     				neighbour.getTimeP()[t] = pickup[i];
     				neighbour.getTimeD()[t] = deliver[i];
     				i++;
@@ -321,7 +321,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
 
     /**
-     * Generates a list of all possible permutations of an given list of integers
+     * Generates a list of all possible permutations of a given list of integers
      * @param original list of integers to permute
      * @return List of all possible permutations of integer list
      */
@@ -403,7 +403,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
      * @return List of neighbours with task changed and all possible delivery times
      */
     private List<PlanState> changeVehicle(Vehicle v1, Vehicle v2, Integer task, PlanState plan) {
-    	List<PlanState> neighbours = new ArrayList<PlanState>();
+        System.out.println("CentralizedTemplate.changeVehicle");
+        List<PlanState> neighbours = new ArrayList<PlanState>();
     	PlanState neighbour = new PlanState(plan);
     	int weight = getTask(plan.tasks, task).weight;
     	neighbour.removeVTasks(v1.id(), task);
