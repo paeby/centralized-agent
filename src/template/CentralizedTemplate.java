@@ -360,13 +360,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
             int deliverIndex = -1;
             if(itP.hasNext()) {
                 pickupTime = itP.next();
-                pickupIndex = itP.indexOf(pickupTime);
+                pickupIndex = findIndex(vehicle, plan, plan.getTimeP(),pickupTime);
             }
             if(itD.hasNext()) {
                 deliverTime = itD.next();
-                deliverIndex = itD.indexOf(deliverTime);
+                deliverIndex = findIndex(vehicle, plan, plan.getTimeD(),deliverTime);
             }
             if(pickupTime < deliverTime) {
+            	System.out.println(pickupIndex);
                 plan.getLoad()[vehicle][pickupTime] += getTask(plan.tasks, pickupIndex).weight;
                 if(plan.getLoad()[vehicle][pickupTime] > plan.vehicles.get(vehicle).capacity()) return false;
       
@@ -376,6 +377,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
         }
         return true;
         
+    }
+    
+    private Integer findIndex(Integer v, PlanState plan, Integer[] times, Integer t) {
+    	for(int i = 0; i < times.length; i++) {
+    		if(times[i] == t && plan.getVTasks().get(v).contains(i)) return i;
+    	}
+    	return null;
     }
 
     /**
@@ -486,7 +494,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
             timeP = new Integer[tasks.size()];
             timeD = new Integer[tasks.size()];
             load = new int[vehicles.size()][2 * tasks.size()];
-            Arrays.fill(load, 0);
             this.vehicles = vehicles;
             this.tasks = tasks;
             for(Vehicle v: vehicles) vTasks.put(v.id(), new HashSet<Integer>());
@@ -500,7 +507,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
             nextPickup = p.getNextPickup().clone();
             timeP = p.getTimeP().clone();
             timeD = p.getTimeD().clone();
-            System.arraycopy(p.getLoad(), 0, load, 0, load.length);
+            load = new int[p.vehicles.size()][2 * p.tasks.size()];
+            System.arraycopy(p.getLoad(), 0, this.load, 0, p.getLoad().length);
             this.tasks = p.tasks;
             this.vehicles = p.vehicles;
             //Copy of HashSet values in Map
@@ -551,8 +559,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
      */
     class ArrayIterator implements Iterator<Object> {
 
-        private List<Integer> l;
-        private HashSet<Integer> tasks = new HashSet<>();
+        private List<Integer> l = new ArrayList<Integer>();
+        private HashSet<Integer> tasks = new HashSet<Integer>();
 
         ArrayIterator(Integer[] time, HashSet<Integer> t) {
             l = Arrays.asList(time);
