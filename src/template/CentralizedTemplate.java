@@ -360,6 +360,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
             int deliverIndex = -1;
             if(itP.hasNext()) {
                 pickupTime = itP.next();
+                for(Integer t2: plan.getTimeP()) System.out.println(t2);
                 pickupIndex = findIndex(vehicle, plan, plan.getTimeP(),pickupTime);
             }
             if(itD.hasNext()) {
@@ -395,7 +396,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
      * @return List of neighbours with task changed and all possible delivery times
      */
     private List<PlanState> changeVehicle(Vehicle v1, Vehicle v2, Integer task, PlanState plan) {
-        System.out.println("CentralizedTemplate.changeVehicle");
         List<PlanState> neighbours = new ArrayList<PlanState>();
     	PlanState neighbour = new PlanState(plan);
     	int weight = getTask(plan.tasks, task).weight;
@@ -561,7 +561,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         ArrayIterator(Integer[] time, HashSet<Integer> t) {
             l = Arrays.asList(time);
             for (Integer i: t) {
-                tasks.add(i);
+                tasks.add(new Integer(i));
             }
         }
 
