@@ -190,7 +190,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
         int t = 0;
         Iterator<Task> it = tasks.iterator();
         int prev = it.next().id;
-        
         plan.getNextPickup()[index] = prev;
         plan.addVTasks(index, prev);
         plan.getTimeP()[prev] = t;
@@ -274,7 +273,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     		v1 = vehicles.get(new Random().nextInt(vehicles.size()));
     		vTasks = plan.getVTasks(v1).size();
     	} while(vTasks < 1);
-    	
+
     	// Change first task with all other vehicles
     	Integer task = plan.getNextPickup()[v1.id()];
     	for(Vehicle v2: vehicles) {
@@ -336,7 +335,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
      * @return true if all pickups of tasks happen before their delivery, else false
      */
     private boolean checkTimes(Integer[] pickup, Integer[] delivery, HashSet<Integer> tasks) {
-        System.out.println("CentralizedTemplate.checkTimes");
         for(Integer t: tasks) {
     		if(pickup[t] > delivery[t]) return false;
     	}
@@ -363,6 +361,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
             int deliverIndex = -1;
             if(itP.hasNext()) {
                 pickupTime = itP.next();
+                //for(Integer t2: plan.getTimeP()) System.out.println(t2);
+
                 pickupIndex = findIndex(vehicle, plan, plan.getTimeP(),pickupTime);
             }
             if(itD.hasNext()) {
@@ -403,7 +403,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	int weight = getTask(plan.tasks, task).weight;
     	neighbour.removeVTasks(v1.id(), task);
     	neighbour.addVTasks(v2.id(), task);
-    	
+
     	for(Integer t: neighbour.getVTasks(v1)) {
     		neighbour.getTimeP()[t] -= 1;
     		neighbour.getTimeD()[t] -= 1;
@@ -429,34 +429,31 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	for(int i = 0; i < (plan.getVTasks(v2).size()-1)*2; i++) {
     		neighbour.getLoad()[v2.id()][i+1] = neighbour.getLoad()[v2.id()][i];
     	}
-        // try to add deliver task until it's not possible anymore, starting from time=1 (not 0, because that is the pickup)
-		for(int deliver = 1; deliver < 2 * neighbour.getVTasks(v2).size(); deliver++){
-            System.out.println("HELLO! IS IT ME YOU'RE LOOKING FOR?");
+
+    	// try to add pickup until it's not possible anymore
+		int deliver = 1;
+		boolean add = true;
+		while(add && deliver < 2 * neighbour.getVTasks(v2).size()) {
 			PlanState newNeighbour = new PlanState(neighbour);
-			boolean add = true;
-			while(add) {
-                System.out.println("neighbour load = " + neighbour.getLoad()[v2.id()][deliver]);
-                System.out.println("weight = " + weight);
-                System.out.println("capacity = " + v2.capacity());
-                if(neighbour.getLoad()[v2.id()][deliver] + weight > v2.capacity()){
-					add = false;
-				}
-				// add at least one delivery
-				for(Integer t: neighbour.getVTasks(v2)) {
-		    		if(neighbour.getTimeD()[task] >= deliver) {
-		    			newNeighbour.getTimeP()[t] += 1;
-		    		}
-		    		if(neighbour.getTimeD()[task] >= deliver) {
-		    			newNeighbour.getTimeD()[t] += 1;
-		    		}
-		    	}
-				newNeighbour.getTimeD()[task] = deliver;
-				// update load
-				for(int i = 0; i < deliver; i++) {
-		    		newNeighbour.getLoad()[v2.id()][i] += weight;
-		    	}
-				neighbours.add(newNeighbour);
+			if(neighbour.getLoad()[v2.id()][deliver] + weight > v2.capacity()){
+				add = false;
 			}
+			// add at least one delivery
+			for(Integer t: neighbour.getVTasks(v2)) {
+	    		if(neighbour.getTimeD()[task] >= deliver) {
+	    			newNeighbour.getTimeP()[t] += 1;
+	    		}
+	    		if(neighbour.getTimeD()[task] >= deliver) {
+	    			newNeighbour.getTimeD()[t] += 1;
+	    		}
+	    	}
+			newNeighbour.getTimeD()[task] = deliver;
+			// update load
+			for(int i = 0; i < deliver; i++) {
+	    		newNeighbour.getLoad()[v2.id()][i] += weight;
+	    	}
+			deliver ++;
+			neighbours.add(newNeighbour);
 		}
     	return neighbours;
     }
