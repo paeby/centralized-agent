@@ -363,8 +363,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
             int deliverIndex = -1;
             if(itP.hasNext()) {
                 pickupTime = itP.next();
-                for(Integer t2: plan.getTimeP()) System.out.println(t2);
-
                 pickupIndex = findIndex(vehicle, plan, plan.getTimeP(),pickupTime);
             }
             if(itD.hasNext()) {
@@ -372,7 +370,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
                 deliverIndex = findIndex(vehicle, plan, plan.getTimeD(),deliverTime);
             }
             if(pickupTime < deliverTime) {
-            	System.out.println(pickupIndex);
                 plan.getLoad()[vID][pickupTime] += getTask(plan.tasks, pickupIndex).weight;
                 if(plan.getLoad()[vID][pickupTime] > plan.vehicles.get(vID).capacity()) return false;
       
@@ -400,6 +397,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
      * @return List of neighbours with task changed and all possible delivery times
      */
     private List<PlanState> changeVehicle(Vehicle v1, Vehicle v2, Integer task, PlanState plan) {
+        System.out.println("CentralizedTemplate.changeVehicle");
         List<PlanState> neighbours = new ArrayList<PlanState>();
     	PlanState neighbour = new PlanState(plan);
     	int weight = getTask(plan.tasks, task).weight;
@@ -431,13 +429,16 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	for(int i = 0; i < (plan.getVTasks(v2).size()-1)*2; i++) {
     		neighbour.getLoad()[v2.id()][i+1] = neighbour.getLoad()[v2.id()][i];
     	}
-    	
-    	// try to add pickup until it's not possible anymore
-		for(int deliver = 1; deliver < 2 * plan.getVTasks(v2).size(); deliver++){
+        // try to add deliver task until it's not possible anymore, starting from time=1 (not 0, because that is the pickup)
+		for(int deliver = 1; deliver < 2 * neighbour.getVTasks(v2).size(); deliver++){
+            System.out.println("HELLO! IS IT ME YOU'RE LOOKING FOR?");
 			PlanState newNeighbour = new PlanState(neighbour);
 			boolean add = true;
 			while(add) {
-				if(neighbour.getLoad()[v2.id()][deliver] + weight > v2.capacity()){
+                System.out.println("neighbour load = " + neighbour.getLoad()[v2.id()][deliver]);
+                System.out.println("weight = " + weight);
+                System.out.println("capacity = " + v2.capacity());
+                if(neighbour.getLoad()[v2.id()][deliver] + weight > v2.capacity()){
 					add = false;
 				}
 				// add at least one delivery
