@@ -573,7 +573,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		private HashSet<Integer> tasks = new HashSet<Integer>();
 
 		ArrayIterator(Integer[] time, HashSet<Integer> t) {
-			l = new ArrayList<Integer>(time.length);
+			l = new ArrayList<Integer>(Collections.nCopies(time.length, -1));
 			for (Integer i: t) {
 				tasks.add(new Integer(i));
 			}
@@ -585,32 +585,25 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		@Override
 		public boolean hasNext() {
 			for (Integer i: tasks) {
-				if(l.get(i) != null) return true;
+				if(l.get(i) != -1) return true;
 			}
 			return false;
 		}
 
 		@Override
 		public Integer next() {
-			Integer min;
+			Integer min = Integer.MAX_VALUE;
 			Integer index = -1;
-			do {
-				min = Collections.min(l, new Comparator<Integer>(){
-					public int compare(Integer o1, Integer o2) {
-						if(o1!=null && o2!=null){
-							return o1.compareTo(o2);
-						}else if(o1!=null){
-							return 1;
-						}else{
-							return -1;  
-						}
-					}});
-				for(int i = 0; i < l.size(); i++) {
-					if(l.get(i) == min && tasks.contains(i)) index = i;
+			
+			for(Integer t: tasks) {
+				if(l.get(t) < min && l.get(t) != -1) {
+					min = l.get(t);
+					index = t;
 				}
-			} while (!tasks.contains(index));
+			}
+		
+			l.set(index, -1); //remove
 			System.out.println(index);
-			l.set(index, null); //remove
 			return min;
 		}
 
