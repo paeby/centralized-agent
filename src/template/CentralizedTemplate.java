@@ -190,7 +190,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
         int t = 0;
         Iterator<Task> it = tasks.iterator();
         int prev = it.next().id;
-        
         plan.getNextPickup()[index] = prev;
         plan.addVTasks(index, prev);
         plan.getTimeP()[prev] = t;
@@ -274,7 +273,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     		v1 = vehicles.get(new Random().nextInt(vehicles.size()));
     		vTasks = plan.getVTasks(v1).size();
     	} while(vTasks < 1);
-    	
+
     	// Change first task with all other vehicles
     	Integer task = plan.getNextPickup()[v1.id()];
     	for(Vehicle v2: vehicles) {
@@ -361,7 +360,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
             int deliverIndex = -1;
             if(itP.hasNext()) {
                 pickupTime = itP.next();
-                for(Integer t2: plan.getTimeP()) System.out.println(t2);
+                //for(Integer t2: plan.getTimeP()) System.out.println(t2);
 
                 pickupIndex = findIndex(vID, plan, plan.getTimeP(),pickupTime);
             }
@@ -370,7 +369,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
                 deliverIndex = findIndex(vID, plan, plan.getTimeD(),deliverTime);
             }
             if(pickupTime < deliverTime) {
-            	System.out.println(pickupIndex);
                 plan.getLoad()[vID][pickupTime] += getTask(plan.tasks, pickupIndex).weight;
                 if(plan.getLoad()[vID][pickupTime] > plan.vehicles.get(vID).capacity()) return false;
       
@@ -398,12 +396,12 @@ public class CentralizedTemplate implements CentralizedBehavior {
      * @return List of neighbours with task changed and all possible delivery times
      */
     private List<PlanState> changeVehicle(Vehicle v1, Vehicle v2, Integer task, PlanState plan) {
-        List<PlanState> neighbours = new ArrayList<PlanState>();
+    	List<PlanState> neighbours = new ArrayList<PlanState>();
     	PlanState neighbour = new PlanState(plan);
     	int weight = getTask(plan.tasks, task).weight;
     	neighbour.removeVTasks(v1.id(), task);
     	neighbour.addVTasks(v2.id(), task);
-    	
+
     	for(Integer t: neighbour.getVTasks(v1)) {
     		neighbour.getTimeP()[t] -= 1;
     		neighbour.getTimeD()[t] -= 1;
@@ -429,31 +427,31 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	for(int i = 0; i < (plan.getVTasks(v2).size()-1)*2; i++) {
     		neighbour.getLoad()[v2.id()][i+1] = neighbour.getLoad()[v2.id()][i];
     	}
-    	
+
     	// try to add pickup until it's not possible anymore
-		for(int deliver = 1; deliver < 2 * plan.getVTasks(v2).size(); deliver++){
+		int deliver = 1;
+		boolean add = true;
+		while(add && deliver < 2 * neighbour.getVTasks(v2).size()) {
 			PlanState newNeighbour = new PlanState(neighbour);
-			boolean add = true;
-			while(add) {
-				if(neighbour.getLoad()[v2.id()][deliver] + weight > v2.capacity()){
-					add = false;
-				}
-				// add at least one delivery
-				for(Integer t: neighbour.getVTasks(v2)) {
-		    		if(neighbour.getTimeD()[task] >= deliver) {
-		    			newNeighbour.getTimeP()[t] += 1;
-		    		}
-		    		if(neighbour.getTimeD()[task] >= deliver) {
-		    			newNeighbour.getTimeD()[t] += 1;
-		    		}
-		    	}
-				newNeighbour.getTimeD()[task] = deliver;
-				// update load
-				for(int i = 0; i < deliver; i++) {
-		    		newNeighbour.getLoad()[v2.id()][i] += weight;
-		    	}
-				neighbours.add(newNeighbour);
+			if(neighbour.getLoad()[v2.id()][deliver] + weight > v2.capacity()){
+				add = false;
 			}
+			// add at least one delivery
+			for(Integer t: neighbour.getVTasks(v2)) {
+	    		if(neighbour.getTimeD()[task] >= deliver) {
+	    			newNeighbour.getTimeP()[t] += 1;
+	    		}
+	    		if(neighbour.getTimeD()[task] >= deliver) {
+	    			newNeighbour.getTimeD()[t] += 1;
+	    		}
+	    	}
+			newNeighbour.getTimeD()[task] = deliver;
+			// update load
+			for(int i = 0; i < deliver; i++) {
+	    		newNeighbour.getLoad()[v2.id()][i] += weight;
+	    	}
+			deliver ++;
+			neighbours.add(newNeighbour);
 		}
     	return neighbours;
     }
