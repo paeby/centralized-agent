@@ -471,7 +471,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         private Integer[] nextPickup; //
         private Integer[] timeP; // [p0, p1, ..., pn]
         private Integer[] timeD; // [d0, d1, ..., dn]
-        private Integer[][] load;
+        private int[][] load;
         private final List<Vehicle> vehicles;
         private final TaskSet tasks;
         private Map<Integer, HashSet<Integer>> vTasks = new HashMap<Integer, HashSet<Integer>>(); // Map from vehicle_id to Set of tasks in vehicle's track
@@ -485,7 +485,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
             nextPickup = new Integer[vehicles.size()];
             timeP = new Integer[tasks.size()];
             timeD = new Integer[tasks.size()];
-            load = new Integer[vehicles.size()][2 * tasks.size()];
+            load = new int[vehicles.size()][2 * tasks.size()];
+            Arrays.fill(load, 0);
             this.vehicles = vehicles;
             this.tasks = tasks;
             for(Vehicle v: vehicles) vTasks.put(v.id(), new HashSet<Integer>());
@@ -499,7 +500,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
             nextPickup = p.getNextPickup().clone();
             timeP = p.getTimeP().clone();
             timeD = p.getTimeD().clone();
-            load = p.getLoad().clone();
+            System.arraycopy(p.getLoad(), 0, load, 0, load.length);
             this.tasks = p.tasks;
             this.vehicles = p.vehicles;
             //Copy of HashSet values in Map
@@ -523,12 +524,16 @@ public class CentralizedTemplate implements CentralizedBehavior {
             return timeD;
         }
 
-        public Integer[][] getLoad() {
+        public int[][] getLoad() {
             return load;
         }
 
         public Map<Integer, HashSet<Integer>> getVTasks() {
             return vTasks;
+        }
+
+        public HashSet<Integer> getVTasks(Vehicle v) {
+            return vTasks.get(v.id());
         }
         
         public void addVTasks(Integer v, Integer t) {
