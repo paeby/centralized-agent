@@ -591,25 +591,18 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
 		@Override
 		public Integer next() {
-			Integer min;
+			Integer min = Integer.MAX_VALUE;
 			Integer index = -1;
-			do {
-				min = Collections.min(l, new Comparator<Integer>(){
-					public int compare(Integer o1, Integer o2) {
-						if(o1!=-1 && o2!=-1){
-							return o1.compareTo(o2);
-						}else if(o1!=-1){
-							return 1;
-						}else{
-							return -1;  
-						}
-					}});
-				for(int i = 0; i < l.size(); i++) {
-					if(l.get(i) == min && tasks.contains(i)) index = i;
+			
+			for(Integer t: tasks) {
+				if(l.get(t) < min && l.get(t) != -1) {
+					min = l.get(t);
+					index = t;
 				}
-			} while (!tasks.contains(index));
-			System.out.println(min);
+			}
+		
 			l.set(index, -1); //remove
+			System.out.println(index);
 			return min;
 		}
 
