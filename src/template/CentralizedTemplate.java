@@ -74,6 +74,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return plans;
     }
 
+    /**
+     * Computes the plan for all vehicles
+     * @param vehicles set of all vehicles in world
+     * @param tasks set of all tasks to be distributed to vehicles
+     * @param plan initial plan
+     * @return a set of logist plans for all the vehicles in world
+     */
     private List<Plan> centralizedPlan(List<Vehicle> vehicles, final TaskSet tasks, PlanState plan) {
         initSolution(vehicles, tasks, plan);
         for (int i = 0; i < 10000; i++) {
@@ -130,7 +137,12 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
 
 
-
+    /**
+     * Provided in template
+     * @param vehicle single vehicle
+     * @param tasks tasks
+     * @return a plan with all tasks for a single vehicle
+     */
     private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
         City current = vehicle.getCurrentCity();
         Plan plan = new Plan(current);
@@ -156,6 +168,12 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return plan;
     }
 
+    /**
+     * Initialises the plan with all tasks given to the vehicle with biggest capacity
+     * @param vehicles Set of vehicles
+     * @param tasks set of tasks
+     * @param plan empty plan
+     */
     private void initSolution(List<Vehicle> vehicles, TaskSet tasks, PlanState plan) {
         int maxCap = 0;
         int index = -1;
@@ -186,7 +204,12 @@ public class CentralizedTemplate implements CentralizedBehavior {
             plan.getLoad()[index][t] = 0;
         }
     }
-    
+
+    /**
+     * Chooses best option (lowest cost) in list of neighbours
+     * @param neighbours list of neighbours from current state
+     * @return Best plan option of this iteration
+     */
     private PlanState localChoice(List<PlanState> neighbours) {
     	PlanState bestPlan = null;
     	double min = Double.MAX_VALUE;
@@ -229,13 +252,20 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	}
     	return bestPlan;
     }
-    
+
+    /**
+     * Computes all PlanState neighbours from given PlanState by exchanging tasks between vehicles, and permuting within a vehicle
+     * @param plan current plan
+     * @param tasks set of all tasks
+     * @param vehicles set of all vehicles
+     * @return a list of PlanStates that are neighbours of the current plan
+     */
     private List<PlanState> ChooseNeighbours(PlanState plan, TaskSet tasks, List<Vehicle> vehicles){
     	List<PlanState> neighbours = new ArrayList<PlanState>();
     	Vehicle v1;
     	
     	// Pick random vehicle
-    	int vTasks = 0;
+    	int vTasks;
     	do {
     		v1 = vehicles.get(new Random().nextInt(vehicles.size() + 1));
     		vTasks = plan.getVTasks().get(v1.id()).size();
@@ -256,7 +286,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	
     	return neighbours;
     }
-    
+
+    /**
+     * Creates neighbours with permuted task orders for a given vehicle
+     * @param v1 given vehicle
+     * @param plan current plan
+     * @return neighbours of the current plan with permutations over task set of vehicle v1
+     */
     private List<PlanState> changeTaskOrder(Vehicle v1, PlanState plan) {
     	List<PlanState> neighbours = new ArrayList<PlanState>();
     	int arraySize =  plan.getVTasks().get(v1.id()).size();
@@ -282,7 +318,12 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	
     	return neighbours;
     }
-    
+
+    /**
+     * Generates a list of all possible permutations of an given list of integers
+     * @param original list of integers to permute
+     * @return List of all possible permutations of integer list
+     */
     public List<List<Integer>> generatePerm(List<Integer> original) {
         if (original.size() == 0) { 
           List<List<Integer>> result = new ArrayList<List<Integer>>();
@@ -292,23 +333,36 @@ public class CentralizedTemplate implements CentralizedBehavior {
         Integer firstElement = original.remove(0);
         List<List<Integer>> returnValue = new ArrayList<List<Integer>>();
         List<List<Integer>> permutations = generatePerm(original);
-        for (List<Integer> smallerPermutated : permutations) {
-          for (int index=0; index <= smallerPermutated.size(); index++) {
-            List<Integer> temp = new ArrayList<Integer>(smallerPermutated);
+        for (List<Integer> smallerPermuted : permutations) {
+          for (int index=0; index <= smallerPermuted.size(); index++) {
+            List<Integer> temp = new ArrayList<Integer>(smallerPermuted);
             temp.add(index, firstElement);
             returnValue.add(temp);
           }
         }
         return returnValue;
       }
-    
+
+    /**
+     * Checks the validity of pickup and delivery time arrays
+     * @param pickup array for pickup times of tasks, with each id = task_id and pickup[id] the time at which it is picked up
+     * @param delivery array for delivery times of tasks, idem pickup
+     * @param tasks task ids to be to be checked, i.e. the tasks belonging to a specific vehicle's route
+     * @return true if all pickups of tasks happen before their delivery, else false
+     */
     private boolean checkTimes(Integer[] pickup, Integer[] delivery, HashSet<Integer> tasks) {
     	for(Integer t: tasks) {
     		if(pickup[t] > delivery[t]) return false;
     	}
     	return true;
     }
-    
+
+    /**
+     * Updates the load values of a plan for a given vehicle
+     * @param plan to be updated
+     * @param vehicle for which the task-permutation has changed
+     * @return true if load is legal, else false
+     */
     private boolean updateLoad(PlanState plan, Integer vehicle) {
     	Integer next = plan.getNextPickup()[vehicle];
         Task t = getTask(plan.tasks, next);
@@ -338,7 +392,15 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return true;
         
     }
-    
+
+    /**
+     * Moves first task in set of v1 to first task in set of v2 and makes necessary updates
+     * @param v1 first vehicle
+     * @param v2 second vehicle
+     * @param task task id
+     * @param plan current plan
+     * @return List of neighbours with task changed and all possible delivery times
+     */
     private List<PlanState> changeVehicle(Vehicle v1, Vehicle v2, Integer task, PlanState plan) {
     	List<PlanState> neighbours = new ArrayList<PlanState>();
     	PlanState neighbour = new PlanState(plan);
@@ -399,7 +461,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		}
     	return neighbours;
     }
-    
+
+    /**
+     * Gets the Task from set with task_id id
+     * @param tasks set
+     * @param id id
+     * @return task with id
+     */
     private Task getTask(TaskSet tasks, int id) {
         for (Task t : tasks) {
             if (t.id == id) {
@@ -409,6 +477,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return null;
     }
 
+    /**
+     * State implementation
+     */
     public class PlanState {
 
         private Integer[] nextPickup; //
@@ -435,8 +506,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         /**
          * Constructor that copies a plan
-         * @param vehicles
-         * @param tasks
          * @param p plan to be copied to new plan
          */
         public PlanState(PlanState p) {
