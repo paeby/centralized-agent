@@ -462,10 +462,19 @@ public class CentralizedTemplate implements CentralizedBehavior {
         	neighbour.getNextPickup()[v1.id()] = null ;
         }
         
-        if(!updateLoad(neighbour, v1))System.out.println(neighbour.getVTasks(v1).size());
-        if(!updateLoad(neighbour, v2))System.out.println(neighbour.getVTasks(v2).size());
+        if(neighbour.getVTasks().get(v1.id()).size() != 0){
+        	if(updateLoad(neighbour, v2)) return neighbour;
+        	else{
+        		//System.out.println("v2 problem "+neighbour.getVTasks(v2).size());
+        	}
+        }
+        else{
+        	if(updateLoad(neighbour, v2) && updateLoad(neighbour, v1)) return neighbour;
+        }
+        //if(!updateLoad(neighbour, v1))System.out.println(neighbour.getVTasks(v1).size());
+        //if(!updateLoad(neighbour, v2))System.out.println(neighbour.getVTasks(v2).size());
         
-		return neighbour;
+		return null;
 	}
 //		List<PlanState> neighbours = new ArrayList<PlanState>();
 //		PlanState neighbour = new PlanState(plan);
