@@ -420,14 +420,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		
 		int deliverTask = neighbour.getTimeD()[task];
 		for(Integer t: neighbour.getVTasks(v1)) {
-			neighbour.getTimeP()[t] -= 1;
-			neighbour.getTimeD()[t] -= 1;
 			if(deliverTask < neighbour.getTimeP()[t]) {
 				neighbour.getTimeP()[t] -= 1;
 			}
 			if(deliverTask < neighbour.getTimeD()[t]) {
 				neighbour.getTimeD()[t] -= 1;
 			}
+			neighbour.getTimeP()[t] -= 1;
+			neighbour.getTimeD()[t] -= 1;	
 		}
 		
 		// update because of time shift
@@ -490,7 +490,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
             }
             if(!found) {
             	newNeighbour.getNextPickup()[v1.id()] = null ;
-            	System.out.println("SIZE WHEN NOT FOUND"+newNeighbour.getVTasks().get(v1.id()).size());
+            	System.out.println("SIZE WHEN NOT FOUND "+newNeighbour.getVTasks().get(v1.id()).size());
             }
             	
 			neighbours.add(newNeighbour);
