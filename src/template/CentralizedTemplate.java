@@ -427,7 +427,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		neighbour.addVTasks(v2.id(), task);
 		
 		int deliverTask = neighbour.getTimeD()[task];
-		
+
 		// update times v1 after removing first task
 		for(Integer i: neighbour.getVTasks().get(v1.id())) {
 			if(neighbour.getTimeP()[i]>deliverTask) neighbour.getTimeP()[i] -= 1;
@@ -447,7 +447,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
 				neighbour.getTimeD()[i] += 2;
 			}
 		}
-		
 		// update next pickup v2
 		neighbour.getNextPickup()[v2.id()] = task;
 		
