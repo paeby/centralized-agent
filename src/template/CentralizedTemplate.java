@@ -438,13 +438,12 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		for(int i = 0; i < deliverTask-1; i++) {
 			neighbour.getLoad()[v1.id()][i] -= weight;
 		}
-
 		// increment v2 time array because of pickup insert
 		for(Integer t: neighbour.getVTasks(v2)) { //TODO for all tasks not equal to the one just added? just for the pickup?
-			//if(t != task) { // like this!?
-			neighbour.getTimeP()[t] += 1;
-			neighbour.getTimeD()[t] += 1;
-			//}
+			if(t != task) { // like this!? YES I THINK IT'S RIGHT
+				neighbour.getTimeP()[t] += 1;
+				neighbour.getTimeD()[t] += 1;
+			}
             if (neighbour.getTimeP()[t] >= 60 || neighbour.getTimeD()[t] >= 60)
                 System.out.println("PROBLEM: INDEX TOO BIG " + neighbour.getTimeP()[t] + " " + neighbour.getTimeD()[t]);
 		}
@@ -482,14 +481,15 @@ public class CentralizedTemplate implements CentralizedBehavior {
 			deliver ++;
             
 			newNeighbour.getNextPickup()[v2.id()] = task; // Update nextPickup for v2
-            for (Integer i: newNeighbour.getVTasks(v1)){  // Update nextPickup for v1 to the task after the one just removed
-                boolean found = false;
+			boolean found = false;
+			for (Integer i: newNeighbour.getVTasks(v1)){  // Update nextPickup for v1 to the task after the one just removed
+                
             	if (newNeighbour.getTimeP()[i] == 0){
                     newNeighbour.getNextPickup()[v1.id()] = i;
                     found = true;
                 }
-            	if(!found) System.out.println("not FOUND");
             }
+            if(!found) System.out.println("not FOUND");
             	
 
 			neighbours.add(newNeighbour);
