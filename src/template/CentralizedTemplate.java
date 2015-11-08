@@ -483,15 +483,16 @@ public class CentralizedTemplate implements CentralizedBehavior {
 			newNeighbour.getNextPickup()[v2.id()] = task; // Update nextPickup for v2
 			boolean found = false;
 			for (Integer i: newNeighbour.getVTasks(v1)){  // Update nextPickup for v1 to the task after the one just removed
-                
             	if (newNeighbour.getTimeP()[i] == 0){
                     newNeighbour.getNextPickup()[v1.id()] = i;
                     found = true;
                 }
             }
-            if(!found) System.out.println("not FOUND");
+            if(!found) {
+            	newNeighbour.getNextPickup()[v1.id()] = null ;
+            	System.out.println("SIZE WHEN NOT FOUND"+newNeighbour.getVTasks().get(v1.id()).size());
+            }
             	
-
 			neighbours.add(newNeighbour);
 		}
 		return neighbours;
