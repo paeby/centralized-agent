@@ -439,19 +439,25 @@ public class CentralizedTemplate implements CentralizedBehavior {
 			neighbour.getLoad()[v1.id()][i] -= weight;
 		}
 
-		// increment v2 times because of pickup
-		for(Integer t: neighbour.getVTasks(v2)) {
+		// increment v2 time array because of pickup insert
+		for(Integer t: neighbour.getVTasks(v2)) { //TODO for all tasks not equal to the one just added? just for the pickup?
+			//if(t != task) { // like this!?
 			neighbour.getTimeP()[t] += 1;
 			neighbour.getTimeD()[t] += 1;
+			//}
+            if (neighbour.getTimeP()[t] >= 60 || neighbour.getTimeD()[t] >= 60)
+                System.out.println("PROBLEM: INDEX TOO BIG " + neighbour.getTimeP()[t] + " " + neighbour.getTimeD()[t]);
 		}
+
 
 		// update load of vehicle 2 (since we changed the times)
 		for(int i = 0; i < (plan.getVTasks(v2).size()-1)*2; i++) {
 			neighbour.getLoad()[v2.id()][i+1] = neighbour.getLoad()[v2.id()][i];
 		}
 
-		// try to add pickup until it's not possible anymore
-
+		// try to add delivery until it's not possible anymore
+        // create a neighbour for each delivery possible starting from pickup position at 0
+        // TODO necessary, or just put delivery directly after pickup and allow variations through changeTaskOrder?
 		int deliver = 1;
 		boolean add = true;
 		while(add && deliver < 2 * neighbour.getVTasks(v2).size()) {
