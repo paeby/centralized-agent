@@ -440,7 +440,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		}
 		// increment v2 time array because of pickup insert
 		for(Integer t: neighbour.getVTasks(v2)) { //TODO for all tasks not equal to the one just added? just for the pickup?
-			if(t != task) { // like this!? YES I THINK IT'S RIGHT
+			if(t != task) { // like this!? YES I THINK IT'S RIGHT !!!OMG THIS IS CRAZY!!!
 				neighbour.getTimeP()[t] += 1;
 				neighbour.getTimeD()[t] += 1;
 			}
