@@ -54,32 +54,7 @@
 				<set cost-per-km="5" />
 			</vehicle>
 			
-			<!-- the fourth vehicle (yellow) -->
-			<vehicle name="Vehicle 4">
-				<set color="#ffff00" />
-				<set home="Norwich" />
-				<set speed="90" />
-				<set capacity="30" />
-				<set cost-per-km="5" />
-			</vehicle>
-			
-			<!-- the fifth vehicle (yellow) -->
-			<vehicle name="Vehicle 5">
-				<set color="#ffff00" />
-				<set home="Cardiff" />
-				<set speed="90" />
-				<set capacity="30" />
-				<set cost-per-km="5" />
-			</vehicle>
-			
-			<!-- the sixth vehicle (yellow) -->
-			<vehicle name="Vehicle 4">
-				<set color="#ffff00" />
-				<set home="Leeds" />
-				<set speed="90" />
-				<set capacity="30" />
-				<set cost-per-km="5" />
-			</vehicle>
+
 			
 		</company>
 	</companies>
