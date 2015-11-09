@@ -76,26 +76,28 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		initSolution(vehicles, tasks, plan);
 		long time_start = System.currentTimeMillis();
 		boolean optimal = false;
+		boolean newPlan = false;
 		int counter = 0;
 		double prevCost = plan.cost;
 		
-		for (int i = 0; i < 20000 && !optimal; i++) {
+		for (int i = 0; i < 10000 && !optimal; i++) {
 			List<PlanState> neighbours = ChooseNeighbours(plan, tasks, vehicles);
 			if(new Random().nextInt(100) < 40) {
 				plan = localChoice(neighbours);
+				newPlan = true;
 			}
 			if(System.currentTimeMillis()-time_start > this.timeout_plan) {
 				System.out.println("time out centralized plan");
 				break;
 			}
-			if(prevCost == plan.cost){
+			if(prevCost == plan.cost && newPlan){
 				counter++;
-				if(counter == 200) {
-					optimal = false;
+				if(counter == 150) {
+					optimal = true;
 					System.out.println("Number steps: "+i);
 				}
 			}
-			else counter = 0;
+			newPlan = false;
 			prevCost = plan.cost;
 		}
 		System.out.println("Cost: "+plan.cost);
