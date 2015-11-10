@@ -75,33 +75,23 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	private List<Plan> centralizedPlan(List<Vehicle> vehicles, final TaskSet tasks, PlanState plan) {
 		initSolution(vehicles, tasks, plan);
 		long time_start = System.currentTimeMillis();
-		boolean optimal = false;
-		boolean newPlan = false;
-		int counter = 0;
-		double prevCost = plan.cost;
+		double min = Integer.MAX_VALUE;
+		PlanState bestPlan = new PlanState(plan);
 		
-		for (int i = 0; i < 10000 && !optimal; i++) {
+		for (int i = 0; i < 10000; i++) {
 			List<PlanState> neighbours = ChooseNeighbours(plan, tasks, vehicles);
 			if(new Random().nextInt(100) < 40) {
 				plan = localChoice(neighbours);
-				newPlan = true;
 			}
 			if(System.currentTimeMillis()-time_start > this.timeout_plan) {
 				System.out.println("time out centralized plan");
 				break;
 			}
-			if(prevCost == plan.cost && newPlan){
-				counter++;
-				if(counter == 150) {
-					optimal = true;
-					System.out.println("Number steps: "+i);
-				}
-			}
-			newPlan = false;
-			prevCost = plan.cost;
+			if(plan.cost < min && plan.cost != 0) bestPlan = new PlanState(plan);
 		}
-		System.out.println("Cost: "+plan.cost);
-		for(Vehicle v: vehicles)System.out.println(plan.getVTasks(v).size());
+		
+		System.out.println("Cost: "+bestPlan.cost);
+		for(Vehicle v: vehicles)System.out.println(bestPlan.getVTasks(v).size());
 		List<Plan> vplans = new ArrayList<Plan>();
 
 		Helper helper = new Helper() {
@@ -147,7 +137,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		};
 
 		for (Vehicle v: vehicles) {
-			vplans.add(v.id(), helper.buildPlan(plan, v));
+			vplans.add(v.id(), helper.buildPlan(bestPlan, v));
 		}
 		return vplans;
 	}
@@ -369,7 +359,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		Integer[] times = new Integer[plan.getTimeP().length + plan.getTimeD().length];
 		System.arraycopy(plan.getTimeP(), 0, times, 0, plan.getTimeP().length);
 		System.arraycopy(plan.getTimeD(), 0, times, plan.getTimeP().length, plan.getTimeD().length);
-		
 		ArrayIterator it = new ArrayIterator(times, plan.getVTasks().get(vehicle.id()));
 
 		for(int i = 0; i < 2*plan.tasks.size(); i++) {
