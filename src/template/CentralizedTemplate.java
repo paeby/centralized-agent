@@ -77,17 +77,35 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		long time_start = System.currentTimeMillis();
 		double min = Integer.MAX_VALUE;
 		PlanState bestPlan = new PlanState(plan);
+		int counter = 0;
+		double planCostPrev = 0;
+		List<PlanState> neighbours = new ArrayList<PlanState>();
 		
-		for (int i = 0; i < 10000; i++) {
-			List<PlanState> neighbours = ChooseNeighbours(plan, tasks, vehicles);
-			if(new Random().nextInt(100) < 40) {
+		for (int i = 0; i < 3000; i++) {
+			planCostPrev = plan.cost;
+			neighbours = ChooseNeighbours(plan, tasks, vehicles);
+			if(new Random().nextInt(100) <= 40) {
 				plan = localChoice(neighbours);
 			}
+			
+			if(planCostPrev == plan.cost){
+				counter ++;
+				if(counter == 2) {
+					int ind = new Random().nextInt(neighbours.size());
+					plan = neighbours.get(ind);
+					counter = 0;
+				}
+			}
+			
 			if(System.currentTimeMillis()-time_start > this.timeout_plan) {
 				System.out.println("time out centralized plan");
 				break;
 			}
-			if(plan.cost < min && plan.cost != 0) bestPlan = new PlanState(plan);
+			if(plan.cost < min && plan.cost != 0) {
+				bestPlan = new PlanState(plan);
+				min = plan.cost;
+			}
+			System.out.println(plan.cost);
 		}
 		
 		System.out.println("Cost: "+bestPlan.cost);
@@ -174,7 +192,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	}
 
 	/**
-	 * Initialises the plan with all tasks given to the vehicle with biggest capacity
+	 * Initialises the plan distributing tasks among the vehicles
 	 * @param vehicles Set of vehicles
 	 * @param tasks set of tasks
 	 * @param plan empty plan
@@ -279,7 +297,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 				neighbours.addAll(changeVehicle(v1, v2, task, plan));
 			}		
 		}
-
+			
 		// Changing task order 
 		neighbours.addAll(changeTaskOrder(v1, plan));
 		return neighbours;
@@ -300,8 +318,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		for(int i = 0; i < arraySize*2-1; i++) {
 			for(int j = i+1; j < arraySize*2; j++) {
 				PlanState neighbour = new PlanState(plan);
-				
+				// exchange two pickups
 				if(i < arraySize && j < arraySize) {
+					// update first pickup
 					if(neighbour.getTimeP()[tasks.get(i)] == 0) {
 						neighbour.getFirstPickup()[v1.id()] = tasks.get(j);
 					}
@@ -312,7 +331,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
 					neighbour.getTimeP()[tasks.get(i)] = neighbour.getTimeP()[tasks.get(j)];
 					neighbour.getTimeP()[tasks.get(j)] = t1;
 				}
+				// exchange a pickup and a deliver
 				else if(i < arraySize && j >= arraySize) {
+					//update next pickup
 					if(neighbour.getTimeP()[tasks.get(i)] == 0){
 						neighbour.getFirstPickup()[v1.id()] = tasks.get(j-arraySize);
 					}
@@ -320,11 +341,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
 					neighbour.getTimeP()[tasks.get(i)] = neighbour.getTimeD()[tasks.get(j-arraySize)];
 					neighbour.getTimeD()[tasks.get(j-arraySize)] = t1;
 				}
+				// exchange two pickups
 				else {
 					int t1 = neighbour.getTimeD()[tasks.get(i-arraySize)];
 					neighbour.getTimeD()[tasks.get(i-arraySize)] = neighbour.getTimeD()[tasks.get(j-arraySize)];
 					neighbour.getTimeD()[tasks.get(j-arraySize)] = t1;
 				}
+				// check that the time constraint and load constraint are satisfied
 				if(checkTimes(neighbour.getTimeP(), neighbour.getTimeD(), plan.getVTasks(v1))
 						&& updateLoad(neighbour, v1)){
 					neighbours.add(neighbour);
@@ -487,7 +510,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	 */
 	public class PlanState {
 
-		private Integer[] firstPickup; //
+		private Integer[] firstPickup; 
 		private Integer[] timeP; // [p0, p1, ..., pn]
 		private Integer[] timeD; // [d0, d1, ..., dn]
 		private int[][] load;
@@ -582,7 +605,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	}
 
 	/**
-	 * Iterates over an int array from min to max
+	 * Iterates over an int array from min to max given the tasks of a vehicle
 	 */
 	class ArrayIterator implements Iterator<Object> {
 
