@@ -78,17 +78,21 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		double min = Integer.MAX_VALUE;
 		PlanState bestPlan = new PlanState(plan);
 		int counter = 0;
-		double planCostPrev = 0;
+		double planCostPrev;
 		List<PlanState> neighbours = new ArrayList<PlanState>();
+		//cost and load initialized
+		for(Vehicle v: vehicles) {
+			updateLoad(plan, v);
+		}
 		
-		for (int i = 0; i < 3000; i++) {
-			planCostPrev = plan.cost;
+		for (int i = 0; i < 1000; i++) {
+			planCostPrev = plan.getCost();
 			neighbours = ChooseNeighbours(plan, tasks, vehicles);
-			if(new Random().nextInt(100) <= 40) {
+			if(new Random().nextInt(100) <= 30) {
 				plan = localChoice(neighbours);
 			}
 			
-			if(planCostPrev == plan.cost){
+			if(planCostPrev == plan.getCost()){
 				counter ++;
 				if(counter == 2) {
 					int ind = new Random().nextInt(neighbours.size());
@@ -101,14 +105,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
 				System.out.println("time out centralized plan");
 				break;
 			}
-			if(plan.cost < min && plan.cost != 0) {
+			if(plan.getCost() < min && plan.getCost() != 0) {
 				bestPlan = new PlanState(plan);
-				min = plan.cost;
+				min = plan.getCost();
 			}
-			System.out.println(plan.cost);
+			System.out.println(plan.getCost());
 		}
 		
-		System.out.println("Cost: "+bestPlan.cost);
+		System.out.println("Cost: "+bestPlan.getCost());
 		for(Vehicle v: vehicles)System.out.println(bestPlan.getVTasks(v).size());
 		List<Plan> vplans = new ArrayList<Plan>();
 
@@ -237,37 +241,41 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		PlanState bestPlan = null;
 		double min = Double.MAX_VALUE;
 		for(PlanState neighbour: neighbours) {
-			double cost = 0;
-			for(Vehicle v: neighbour.vehicles) {
-				Integer next = neighbour.getFirstPickup()[v.id()];
-				if(next != null) {
-					City current = v.homeCity();
-					Integer[] times = new Integer[neighbour.getTimeP().length + neighbour.getTimeD().length];
-					System.arraycopy(neighbour.getTimeP(), 0, times, 0, neighbour.getTimeP().length);
-					System.arraycopy(neighbour.getTimeD(), 0, times, neighbour.getTimeP().length, neighbour.getTimeD().length);
-					ArrayIterator it = new ArrayIterator(times, neighbour.getVTasks().get(v.id()));
-					
-					while(it.hasNext()) {
-						int time = it.next();
-						int pickupIndex = findIndex(v, neighbour, neighbour.getTimeP(), time);
-						int deliverIndex = findIndex(v, neighbour, neighbour.getTimeD(), time);
-						
-						if(pickupIndex != -1) {
-							cost += current.distanceTo(getTask(neighbour.tasks, pickupIndex).pickupCity)*v.costPerKm();
-							current = getTask(neighbour.tasks, pickupIndex).pickupCity;
-	
-						} else {
-							cost += current.distanceTo(getTask(neighbour.tasks, deliverIndex).deliveryCity)*v.costPerKm();
-							current = getTask(neighbour.tasks, deliverIndex).deliveryCity;
-						}
-					}
-				}
-			}
-			neighbour.cost = cost;
-			if(cost < min) {
-				min = cost;
+			if(neighbour.getCost() < min){
 				bestPlan = neighbour;
+				min = neighbour.getCost();
 			}
+//			double cost = 0;
+//			for(Vehicle v: neighbour.vehicles) {
+//				Integer next = neighbour.getFirstPickup()[v.id()];
+//				if(next != null) {
+//					City current = v.homeCity();
+//					Integer[] times = new Integer[neighbour.getTimeP().length + neighbour.getTimeD().length];
+//					System.arraycopy(neighbour.getTimeP(), 0, times, 0, neighbour.getTimeP().length);
+//					System.arraycopy(neighbour.getTimeD(), 0, times, neighbour.getTimeP().length, neighbour.getTimeD().length);
+//					ArrayIterator it = new ArrayIterator(times, neighbour.getVTasks().get(v.id()));
+//					
+//					while(it.hasNext()) {
+//						int time = it.next();
+//						int pickupIndex = findIndex(v, neighbour, neighbour.getTimeP(), time);
+//						int deliverIndex = findIndex(v, neighbour, neighbour.getTimeD(), time);
+//						
+//						if(pickupIndex != -1) {
+//							cost += current.distanceTo(getTask(neighbour.tasks, pickupIndex).pickupCity)*v.costPerKm();
+//							current = getTask(neighbour.tasks, pickupIndex).pickupCity;
+//	
+//						} else {
+//							cost += current.distanceTo(getTask(neighbour.tasks, deliverIndex).deliveryCity)*v.costPerKm();
+//							current = getTask(neighbour.tasks, deliverIndex).deliveryCity;
+//						}
+//					}
+//				}
+//			}
+//			neighbour.cost = cost;
+//			if(cost < min) {
+//				min = cost;
+//				bestPlan = neighbour;
+//			}
 		}
 		return bestPlan;
 	}
@@ -281,25 +289,37 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	 */
 	private List<PlanState> ChooseNeighbours(PlanState plan, TaskSet tasks, List<Vehicle> vehicles){
 		List<PlanState> neighbours = new ArrayList<PlanState>();
-		Vehicle v1;
+		Vehicle v;
 
-		// Pick random vehicle
-		int vTasks;
+		//Pick random vehicle
+		int nTasks;
 		do {
-			v1 = vehicles.get(new Random().nextInt(vehicles.size()));
-			vTasks = plan.getVTasks(v1).size();
-		} while(vTasks < 1);
+			v = vehicles.get(new Random().nextInt(vehicles.size()));
+			nTasks = plan.getVTasks(v).size();
+		} while(nTasks < 1);
 
 		// Change first task with all other vehicles
-		Integer task = plan.getFirstPickup()[v1.id()];
+		Integer task = plan.getFirstPickup()[v.id()];
 		for(Vehicle v2: vehicles) {
-			if(v1.id() != v2.id() && getTask(tasks, task).weight <= v2.capacity()){
-				neighbours.addAll(changeVehicle(v1, v2, task, plan));
+			if(v.id() != v2.id() && getTask(tasks, task).weight <= v2.capacity()){
+				neighbours.addAll(changeVehicle(v, v2, task, plan));
 			}		
 		}
-			
+//		int vTasks;
+//		int t;
+//		for(Vehicle v1: vehicles){
+//			if(plan.getVTasks(v1).size() > 0) {
+//				for(Vehicle v2: vehicles) {
+//					t = plan.getFirstPickup()[v1.id()];
+//					if(v1.id() != v2.id() && getTask(tasks, t).weight <= v2.capacity()){
+//						neighbours.addAll(changeVehicle(v1, v2, t, plan));
+//					}		
+//				}
+//			}
+//		}
+		
 		// Changing task order 
-		neighbours.addAll(changeTaskOrder(v1, plan));
+		neighbours.addAll(changeTaskOrder(v, plan));
 		return neighbours;
 	}
 
@@ -379,32 +399,41 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	 */
 	private boolean updateLoad(PlanState plan, Vehicle vehicle) {
 		int vID = vehicle.id();
-		Integer[] times = new Integer[plan.getTimeP().length + plan.getTimeD().length];
-		System.arraycopy(plan.getTimeP(), 0, times, 0, plan.getTimeP().length);
-		System.arraycopy(plan.getTimeD(), 0, times, plan.getTimeP().length, plan.getTimeD().length);
-		ArrayIterator it = new ArrayIterator(times, plan.getVTasks().get(vehicle.id()));
-
-		for(int i = 0; i < 2*plan.tasks.size(); i++) {
-			plan.getLoad()[vID][i] = 0;
-		}
-		
-		int load = 0;
-		
-		while(it.hasNext()) {
-			int time = it.next();
-			int pickupIndex = findIndex(vehicle, plan, plan.getTimeP(), time);
-			int deliverIndex = findIndex(vehicle, plan, plan.getTimeD(), time);
+		int cost = 0;
+		Integer next = plan.getFirstPickup()[vID];
+		if(next != null) {
+			Integer[] times = new Integer[plan.getTimeP().length + plan.getTimeD().length];
+			System.arraycopy(plan.getTimeP(), 0, times, 0, plan.getTimeP().length);
+			System.arraycopy(plan.getTimeD(), 0, times, plan.getTimeP().length, plan.getTimeD().length);
+			ArrayIterator it = new ArrayIterator(times, plan.getVTasks().get(vehicle.id()));
+	
+			for(int i = 0; i < 2*plan.tasks.size(); i++) {
+				plan.getLoad()[vID][i] = 0;
+			}
 			
-			if(pickupIndex != -1) {
-				load += getTask(plan.tasks, pickupIndex).weight;
-				plan.getLoad()[vID][time] = load;
-				if(load > vehicle.capacity()) return false;
-
-			} else {
-				load -= getTask(plan.tasks, deliverIndex).weight;
-				plan.getLoad()[vID][time] = load;
+			int load = 0;
+			City current = vehicle.homeCity();
+			while(it.hasNext()) {
+				int time = it.next();
+				int pickupIndex = findIndex(vehicle, plan, plan.getTimeP(), time);
+				int deliverIndex = findIndex(vehicle, plan, plan.getTimeD(), time);
+				
+				if(pickupIndex != -1) {
+					load += getTask(plan.tasks, pickupIndex).weight;
+					plan.getLoad()[vID][time] = load;
+					cost += current.distanceTo(getTask(plan.tasks, pickupIndex).pickupCity)*vehicle.costPerKm();
+					current = getTask(plan.tasks, pickupIndex).pickupCity;
+					if(load > vehicle.capacity()) return false;
+	
+				} else {
+					load -= getTask(plan.tasks, deliverIndex).weight;
+					plan.getLoad()[vID][time] = load;
+					cost += current.distanceTo(getTask(plan.tasks, deliverIndex).deliveryCity)*vehicle.costPerKm();
+					current = getTask(plan.tasks, deliverIndex).deliveryCity;
+				}
 			}
 		}
+		plan.cost[vehicle.id()] = cost;
 		return true;
 
 	}
@@ -517,7 +546,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		private List<Vehicle> vehicles;
 		private TaskSet tasks;
 		private Map<Integer, HashSet<Integer>> vTasks = new HashMap<Integer, HashSet<Integer>>(); // Map from vehicle_id to Set of tasks in vehicle's track
-		private double cost;
+		//private double cost;
+		private double[] cost;
 		
 		/**
 		 * Constructor for empty PlanState
@@ -525,7 +555,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		 * @param tasks
 		 */
 		public PlanState(List<Vehicle> vehicles, TaskSet tasks) {
-			cost = 0;
+			cost = new double[vehicles.size()];
 			firstPickup = new Integer[vehicles.size()];
 			timeP = new Integer[tasks.size()];
 			for(int i = 0; i < tasks.size(); i++)timeP[i] = 0;
@@ -542,7 +572,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		 * @param p plan to be copied to new plan
 		 */
 		public PlanState(PlanState p) {
-			this.cost = p.cost;
+			this.cost = p.cost.clone();
 			firstPickup = p.getFirstPickup().clone();
 			timeP = p.getTimeP().clone();
 			timeD = p.getTimeD().clone();
@@ -600,6 +630,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
 		public void removeVTasks(Integer v, Integer t) {
 			vTasks.get(v).remove(t);
+		}
+		
+		public double getCost() {
+			double costTot = 0;
+			for(int i = 0; i < vehicles.size(); i++) {
+				costTot += cost[i];
+			}
+			return costTot;
 		}
 
 	}
