@@ -45,25 +45,7 @@
 				<set cost-per-km="5" />
 			</vehicle>
 			
-				<!-- the second vehicle (red) -->
-			<vehicle name="Vehicle 2">
-				<set color="#ff0000" />
-				<set home="London" />
-				<set speed="90" />
-				<set capacity="30" />
-				<set cost-per-km="5" />
-			</vehicle>
-			
-				
-				<!-- the second vehicle (red) -->
-			<vehicle name="Vehicle 2">
-				<set color="#ff0000" />
-				<set home="Plymouth" />
-				<set speed="90" />
-				<set capacity="30" />
-				<set cost-per-km="5" />
-			</vehicle>
-			
+
 				
 		</company>
 	</companies>

@@ -2,6 +2,8 @@ package template;
 
 //the list of imports
 import java.util.*;
+
+
 import logist.LogistSettings; 
 import logist.behavior.CentralizedBehavior;
 import logist.agent.Agent;
@@ -27,7 +29,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	private Agent agent;
 	private long timeout_setup;
 	private long timeout_plan;
-
+	private int iterations;
 	@Override
 	public void setup(Topology topology, TaskDistribution distribution,
 			Agent agent) {
@@ -43,11 +45,12 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		// the setup method cannot last more than timeout_setup milliseconds
 		timeout_setup = ls.get(LogistSettings.TimeoutKey.SETUP);
 		// the plan method cannot execute more than timeout_plan milliseconds
-		timeout_plan = ls.get(LogistSettings.TimeoutKey.PLAN);
+		timeout_plan = ls.get(LogistSettings.TimeoutKey.PLAN)-1000;
 
 		this.topology = topology;
 		this.distribution = distribution;
 		this.agent = agent;
+		iterations = 10000;
 	}
 
 	@Override
@@ -77,76 +80,48 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		long time_start = System.currentTimeMillis();
 		double min = Integer.MAX_VALUE;
 		PlanState bestPlan = new PlanState(plan);
-		int counter = 0;
-		int counter2 = 0;
-		int counter3 = 0;
-		int counter4 = 0;
-		double planCostPrev;
 		double planCost;
-		int ind;
+		double lastCost;
+		int counter =0;
 		List<PlanState> neighbours = new ArrayList<PlanState>();
 		//cost and load initialized
 		for(Vehicle v: vehicles) {
 			updateLoad(plan, v);
 		}
 		
-		for (int i = 0; i < 10000; i++) {
-			planCostPrev = plan.getCost();
+		for (int i = 0; i < iterations; i++) {
 			neighbours = ChooseNeighbours(plan, tasks, vehicles);
-			if(new Random().nextInt(100) <= 40) {
-				plan = localChoice(neighbours, false, 0);
-			}
-			planCost = plan.getCost();
-			if(planCostPrev == planCost){
-				counter ++;
-				counter2 ++;
-				counter3 ++;
-				counter4 ++;
-				//little jump
-				if(counter == 1) {
-					plan = localChoice(neighbours, true, 10);
-					counter = 0;
-				}
-				//bigger jump
-				if(counter2 == 2) {
-					plan = localChoice(neighbours, true, 100);
-					counter2 = 0;
-				}//big big jump to escape local minimum!
-				if(counter3 == 3) {
-					plan = localChoice(neighbours, true, 300);
-					counter2 = 0;
-				}
-				//ESCAAAAAPE
-				if(counter4==10){
-					int nTasks;
-					Vehicle v;
-					do {
-						v = vehicles.get(new Random().nextInt(vehicles.size()));
-						nTasks = plan.getVTasks(v).size();
-					} while(nTasks < 1);
-					ArrayList<Integer> taskList = new ArrayList<Integer>(new TreeSet<Integer>(plan.getVTasks(v)));
-					neighbours.addAll(shuffle(v, plan, taskList));
-					plan = localChoice(neighbours, true, 300);
-					counter4 = 0;
-				}
-			}
-			else {
-				counter = 0;
-				counter2 = 0;
-				counter3 = 0;
-				counter4=0;
-			}
-			this.timeout_plan = 25000;
 			if(System.currentTimeMillis()-time_start > this.timeout_plan) {
 				System.out.println("time out centralized plan");
 				break;
 			}
+			lastCost = plan.getCost();
+			plan = localChoice(neighbours, plan, i);
+			
 			planCost = plan.getCost();
+			
+			if(lastCost == planCost){
+				counter ++;
+				if(counter == 1){
+					neighbours = (moreNeighbours(vehicles, plan));
+					Collections.sort(neighbours);
+					plan = neighbours.get(0);
+				}
+				if(counter == 2){
+					neighbours = (moreNeighbours(vehicles, plan));
+					plan = localChoice(neighbours, plan, i);
+				}
+			}
+			else{
+				counter = 0;
+			}
 			if(planCost < min) {
 				bestPlan = new PlanState(plan);
 				min = planCost;
+				
 			}
 			System.out.println(planCost);
+	
 		}
 		
 		System.out.println("Cost: "+bestPlan.getCost());
@@ -231,6 +206,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		}
 		return plan;
 	}
+	
 	// new solution: give tasks to nearest vehicle
 	private void initSolution2(List<Vehicle> vehicles, TaskSet tasks, PlanState plan) {
 		City[] cities = new City[vehicles.size()];
@@ -305,34 +281,20 @@ public class CentralizedTemplate implements CentralizedBehavior {
 	 * @param i 
 	 * @return Best plan option of this iteration
 	 */
-	private PlanState localChoice(List<PlanState> neighbours, Boolean random, int i) {
-//		PlanState bestPlan = null;
-//		PlanState[] mins = new PlanState[20];
-//		int counter = 0;
-//		double min = Double.MAX_VALUE;
-//		double cost;
-//		System.out.println(neighbours.size());
-//		for(PlanState neighbour: neighbours) {
-//			cost = neighbour.getCost();
-//			if(cost < min){
-//				bestPlan = neighbour;
-//				mins[counter%20] = neighbour;
-//				min = cost;
-//				counter++;
-//			}
-//		}
-//		System.out.println(counter);
-//		if(random){
-//			if(counter < 20) {
-//				return mins[new Random().nextInt(counter)];
-//			}
-//			else return mins[new Random().nextInt(20)];
-//			
-//		}
-		Collections.sort(neighbours);
-		if(!random) return neighbours.get(0);
-		if(neighbours.size() < i) return neighbours.get(new Random().nextInt(neighbours.size()));
-		return neighbours.get(new Random().nextInt(i));
+	private PlanState localChoice(List<PlanState> neighbours, PlanState old, int i) {
+		//Collections.sort(neighbours);
+		double cost = old.getCost();
+        Random rand = new Random();
+        PlanState best;
+        int tries = neighbours.size();
+        
+        while(tries--> 0) {
+        	best = neighbours.get(rand.nextInt(neighbours.size()));
+        	double diff = cost - best.getCost();
+        	if(diff > 0) return best;
+        	else if(rand.nextDouble() < (Math.exp(diff / ((iterations) / (double) i)))) return best;
+        }
+       return old;	
 	}
 
 	/**
@@ -353,43 +315,57 @@ public class CentralizedTemplate implements CentralizedBehavior {
 			nTasks = plan.getVTasks(v).size();
 		} while(nTasks < 1);
 
-		// Change first task with all other vehicles
-		Integer task = plan.getFirstPickup()[v.id()];
+		// Change random task with all other vehicles
+		HashSet<Integer> vTasks = plan.getVTasks(v);
+		int size = vTasks.size();
+		int item = new Random().nextInt(size);
+		int i = 0;
+		Integer task = 0;
+		for(Integer obj : vTasks){
+			if (i == item) task = obj;
+			i = i + 1;
+		}
+	
 		for(Vehicle v2: vehicles) {
-			if(v.id() != v2.id() && getTask(tasks, task).weight <= v2.capacity()){
+			if(getTask(tasks, task).weight <= v2.capacity()){
 				neighbours.addAll(changeVehicle(v, v2, task, plan));
 			}		
 		}
-//		int vTasks;
-//		int t;
-//		for(Vehicle v1: vehicles){
-//			if(plan.getVTasks(v1).size() > 0) {
-//				for(Vehicle v2: vehicles) {
-//					t = plan.getFirstPickup()[v1.id()];
-//					if(v1.id() != v2.id() && getTask(tasks, t).weight <= v2.capacity()){
-//						neighbours.addAll(changeVehicle(v1, v2, t, plan));
-//					}		
-//				}
-//			}
-//			neighbours.addAll(changeTaskOrder(v1, plan));
-//		}
 		
 		// Changing task order
-		ArrayList<Integer> taskList = new ArrayList<Integer>(new TreeSet<Integer>(plan.getVTasks(v)));
-		neighbours.addAll(changeTaskOrder(v, plan, taskList));
-		//neighbours.addAll(moveTask(v, plan, taskList.get(new Random().nextInt(taskList.size()))));
+		//ArrayList<Integer> taskList = new ArrayList<Integer>(new TreeSet<Integer>(plan.getVTasks(v)));
+		//neighbours.addAll(changeTaskOrder(v, plan, taskList));
 		return neighbours;
 	}
 	
-//	private List<PlanState> moveTask(Vehicle v, PlanState plan, Integer task) {
-//		for(moveTask)
-//	}
+	private List<PlanState> moreNeighbours(List<Vehicle> vehicles, PlanState plan) {
+		List<PlanState> neighbours = new ArrayList<PlanState>();
+		
+		for(Vehicle v1: vehicles) {
+			for(Vehicle v2: vehicles) {
+				if(plan.getVTasks(v1).size()>0){
+					HashSet<Integer> vTasks = plan.getVTasks(v1);
+					int size = vTasks.size();
+					int item = new Random().nextInt(size);
+					int i = 0;
+					Integer task = 0;
+					for(Integer obj : vTasks){
+						if (i == item) task = obj;
+						i = i + 1;
+					}
+					neighbours.addAll(changeVehicle(v1, v2, task, plan));	
+				}
+			}
+		}
+		
+		return neighbours;
+	}
 	
 	private List<PlanState> shuffle(Vehicle v1, PlanState plan, ArrayList<Integer> tasks) {
 		// let's shuffle...
 		List<PlanState> neighbours = new ArrayList<PlanState>();
 		int arraySize =  plan.getVTasks(v1).size();
-		int counter = 1000;
+		int counter = 10000;
 		PlanState neighbour = new PlanState(plan);
 		ArrayList<Integer> shuffleTimes = new ArrayList<Integer>();
 		for(int i = 0; i < arraySize; i++) {
@@ -562,21 +538,16 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		neighbour.addVTasks(v2.id(), task);
 		
 		int deliverTask = neighbour.getTimeD()[task];
-
+		int pickupTask = neighbour.getTimeP()[task];
+		
 		// update times v1 after removing first task
 		for(Integer i: neighbour.getVTasks().get(v1.id())) {
-			if(neighbour.getTimeP()[i]>deliverTask) neighbour.getTimeP()[i] -= 1;
-			if(neighbour.getTimeD()[i]>deliverTask) neighbour.getTimeD()[i] -= 1;
-			neighbour.getTimeP()[i] -= 1;
-			neighbour.getTimeD()[i] -= 1;
+			if(plan.getTimeP()[i]>deliverTask) neighbour.getTimeP()[i] -= 1;
+			if(plan.getTimeD()[i]>deliverTask) neighbour.getTimeD()[i] -= 1;
+			if(plan.getTimeP()[i]>pickupTask) neighbour.getTimeP()[i] -= 1;
+			if(plan.getTimeD()[i]>pickupTask) neighbour.getTimeD()[i] -= 1;
 		}
-		
-		// update time of moved task
-		neighbour.getTimeP()[task] = 0;
-		
-		// update the next pickup
-		neighbour.getFirstPickup()[v2.id()] = task;
-		
+	
 		boolean found = false;
 		for (Integer i: neighbour.getVTasks(v1)){  // Update nextPickup for v1 to the task after the one just removed
         	if (neighbour.getTimeP()[i] == 0){
@@ -587,39 +558,44 @@ public class CentralizedTemplate implements CentralizedBehavior {
         if(!found) {
         	neighbour.getFirstPickup()[v1.id()] = null ;
         }
-		
-		// try to add a deliver until it is not possible anymore
-		int t = 1;
-		boolean canTake = true;
-		
-		while(t < 2*neighbour.getVTasks().get(v2.id()).size() && canTake){
-			if(neighbour.getLoad()[v2.id()][t-1]+getTask(neighbour.tasks, task).weight > v2.capacity()) canTake = false;
-			PlanState newNeighbour = new PlanState(neighbour);
-			// update times v2 after adding the task
-			for(Integer i: neighbour.getVTasks().get(v2.id())) {
-				if(i != task){
-					newNeighbour.getTimeP()[i] += 1;
-					newNeighbour.getTimeD()[i] += 1;
-					if(newNeighbour.getTimeP()[i] >= t)newNeighbour.getTimeP()[i] += 1;
-					if(newNeighbour.getTimeD()[i] >= t)newNeighbour.getTimeD()[i] += 1;
-				}
-			}
-			newNeighbour.getTimeD()[task] = t;
-			newNeighbour.getTimeP()[task] = 0;
-			
-	        if(newNeighbour.getVTasks().get(v1.id()).size() == 0){
-		    	if(updateLoad(newNeighbour, v2)) {
-		    		updateLoad(newNeighbour, v1);
-		    		neighbours.add(newNeighbour);
-		    	}
-	        }
+
+        int n = 2*neighbour.getVTasks().get(v2.id()).size();
         
-	        else if(updateLoad(newNeighbour, v1) && updateLoad(newNeighbour, v2)){	 
-	        	neighbours.add(newNeighbour);
-	        }
-			t++;
-		}
-		return neighbours;
+        for(int d = 1; d < n; d++) {
+        	for(int p = 0; p < d; p++){
+        		PlanState newNeighbour = new PlanState(neighbour);
+        		for(Integer i: neighbour.getVTasks().get(v2.id())) {
+    				if(i != task){
+    					if(neighbour.getTimeP()[i] >= p)newNeighbour.getTimeP()[i]+=1;
+    					if(neighbour.getTimeD()[i] >= p)newNeighbour.getTimeD()[i]+=1;
+    				}
+    			}
+        		for(Integer i: neighbour.getVTasks().get(v2.id())) {
+    				if(i != task){
+    					if(newNeighbour.getTimeP()[i] >= d)newNeighbour.getTimeP()[i]+=1;
+        				if(newNeighbour.getTimeD()[i] >= d)newNeighbour.getTimeD()[i]+=1;
+    				}
+    			}
+        		newNeighbour.getTimeD()[task] = d;
+    			newNeighbour.getTimeP()[task] = p;
+    			found = false;
+    			
+    			for (Integer i: newNeighbour.getVTasks(v2)){  // Update nextPickup for v2 to the task after the one just removed
+    	        	if (newNeighbour.getTimeP()[i] == 0){
+    	                newNeighbour.getFirstPickup()[v2.id()] = i;
+    	                found = true;
+    	            }
+    	        }
+    	        if(!found) {
+    	        	newNeighbour.getFirstPickup()[v1.id()] = null ;
+    	        }
+    		  
+    	        if(updateLoad(newNeighbour, v1) && updateLoad(newNeighbour, v2)){	 
+    	        	neighbours.add(newNeighbour);
+    	        }
+        	}
+        }
+        return neighbours;
 	}
 
 	/**
